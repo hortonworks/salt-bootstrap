@@ -1,0 +1,15 @@
+# Created by .ignore support plugin (hsz.mobi)
+### JetBrains template
+
+*.iml
+
+## Directory-based project format:
+.idea/
+
+
+### Go template
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
