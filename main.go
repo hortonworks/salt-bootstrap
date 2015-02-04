@@ -16,7 +16,7 @@ func main() {
 		return
 	}
 
-	log.Println("[main] Launch cloudbreak-bootstrap")
+	log.Println("[main] Launch cloudbreak-bootstrap application")
 
 	cbboot.NewCloudbreakBootstrapWeb()
 
