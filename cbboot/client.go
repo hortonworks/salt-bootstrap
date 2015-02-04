@@ -15,12 +15,10 @@ func config() (*dockerclient.DockerClient, error) {
     dockerHost := os.Getenv("DOCKER_HOST")
     if dockerHost == "" {
         dockerHost = "unix:///var/run/docker.sock"
-        dockerHost = "tcp://192.168.59.103:2376"
     }
     log.Println("dockerHost: ", dockerHost)
 
     prefixCertPath := os.Getenv("DOCKER_CERT_PATH")
-    prefixCertPath = "/Users/akanto/.boot2docker/certs/boot2docker-vm/"
     log.Println("prefixCertPath: ", prefixCertPath)
 
     var tlsConfig *tls.Config
