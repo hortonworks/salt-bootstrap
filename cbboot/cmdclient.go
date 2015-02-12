@@ -37,6 +37,9 @@ func cmdExecute(cmd string, host string, c Container) (outStr string, err error)
                 cmdArgs = append(cmdArgs, "--privileged")
             }
             cmdArgs = append(cmdArgs, "--name", c.Name, c.Image)
+            for _, arg := range c.Arguments {
+                cmdArgs = append(cmdArgs, arg)
+            }
         }
         case "rm": {
             cmdArgs = []string{cmd}

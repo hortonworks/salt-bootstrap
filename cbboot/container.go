@@ -7,11 +7,12 @@ type Container struct {
     Image        string   `json:"image"`
     Volumes      []string `json:"volumes"`
     EnvVars      []string `json:"envVars"`
+    Arguments    []string `json:"args"`
     AutoRestart  bool     `json:"autoRestart"`
     Privileged   bool     `json:"privileged"`
     HostNet      bool     `json:"hostNet"`
 }
 
 func (c Container) String() string {
-    return fmt.Sprintf("Container[Name: %s, Image: %s, Volumes: %s, EnvVars: %s, AutoRestart: %t, Privileged %t, HostNet %t]", c.Name, c.Image, c.Volumes, c.EnvVars, c.AutoRestart, c.Privileged, c.HostNet)
+    return fmt.Sprintf("Container[Name: %s, Image: %s, Volumes: %s, EnvVars: %s, Arguments: %s, AutoRestart: %t, Privileged %t, HostNet %t]", c.Name, c.Image, c.Volumes, c.EnvVars, c.Arguments, c.AutoRestart, c.Privileged, c.HostNet)
 }
