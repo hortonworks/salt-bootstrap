@@ -8,12 +8,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/mux"
-)
+	"github.com/gorilla/mux")
 
 func handleHealtchCheck(w http.ResponseWriter, req *http.Request) {
 	log.Println("[web] handleHealtchCheck executed")
-	json.NewEncoder(w).Encode("OK")
+	cResp :=  Response{Status: "OK"}
+	json.NewEncoder(w).Encode(cResp)
 
 }
 
@@ -39,7 +39,7 @@ func handleContainerRequest(w http.ResponseWriter, req *http.Request) {
 	outStr, err = cmdExecute(cReq.Cmd, cReq.Address, cReq.Container);
 
 	log.Println("[web] generate response for: ", cReq)
-	cResp := new(Response)
+	cResp := new(ContainerResponse)
 	if err != nil {
 		log.Println("[web] [ERROR] cannot start container: ", err)
 		cResp.Status = "ERR"
