@@ -15,6 +15,9 @@ go get github.com/gorilla/mux
 go get github.com/samalba/dockerclient
 go get github.com/hashicorp/consul-template
 
+
+export CBBOOT_JOIN_FILE=/home/vagrant/join.json
+
 echo "Staring cloudbreak-bootstrap"
 cd cloudbreak-bootstrap
 go run main.go

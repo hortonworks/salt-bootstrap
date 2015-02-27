@@ -6,13 +6,30 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
-	"github.com/gorilla/mux")
+	"github.com/gorilla/mux"
+	"github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model")
 
-func handleHealtchCheck(w http.ResponseWriter, req *http.Request) {
+func handleHealthCheck(w http.ResponseWriter, req *http.Request) {
 	log.Println("[web] handleHealtchCheck executed")
-	cResp :=  Response{Status: "OK"}
+	cResp :=  model.Response{Status: "OK"}
+	json.NewEncoder(w).Encode(cResp)
+}
+
+func handleConsulRequest(w http.ResponseWriter, req *http.Request) {
+	log.Println("[web] handleConsulRequest executed")
+
+	decoder := json.NewDecoder(req.Body)
+	var consulClusterReq model.ConsulClusterRequest
+	err := decoder.Decode(&consulClusterReq)
+	if err != nil {
+		log.Println("[web] [ERROR] couldn't decode json: ", err)
+	}
+
+	cResp := executeConsulBootstrap(consulClusterReq);
+
+	w.Header().Set("Content-Type", "application/json")
+	log.Println("[web] generated response: ", cResp)
 	json.NewEncoder(w).Encode(cResp)
 
 }
@@ -21,7 +38,7 @@ func handleContainerRequest(w http.ResponseWriter, req *http.Request) {
 	log.Println("[web] launchContainer")
 
 	decoder := json.NewDecoder(req.Body)
-	var cReq Request
+	var cReq model.Request
 	err := decoder.Decode(&cReq)
 	if err != nil {
 		log.Println("[web] [ERROR] couldn't decode json: ", err)
@@ -39,16 +56,11 @@ func handleContainerRequest(w http.ResponseWriter, req *http.Request) {
 	outStr, err = cmdExecute(cReq.Cmd, cReq.Address, cReq.Container);
 
 	log.Println("[web] generate response for: ", cReq)
-	cResp := new(ContainerResponse)
-	if err != nil {
-		log.Println("[web] [ERROR] cannot start container: ", err)
-		cResp.Status = "ERR"
-		cResp.ErrorText =  strings.TrimSpace(outStr + " " + err.Error())
-	} else {
-		cResp.Status = "OK"
-	}
+	cResp := new(model.ContainerResponse)
 
+	cResp.Fill(outStr, err)
 	cResp.Container = cReq.Container
+
 	w.Header().Set("Content-Type", "application/json")
 	log.Println("[web] generated response: ", cResp)
 	json.NewEncoder(w).Encode(cResp)
@@ -68,8 +80,9 @@ func NewCloudbreakBootstrapWeb() {
 	log.Println("[web] NewCloudbreakBootstrapWeb")
 
 	r := mux.NewRouter()
-	r.HandleFunc("/cbboot/health", handleHealtchCheck).Methods("GET")
+	r.HandleFunc("/cbboot/health", handleHealthCheck).Methods("GET")
 	r.HandleFunc("/cbboot/launch", handleContainerRequest).Methods("POST")
+	r.HandleFunc("/cbboot/consul", handleConsulRequest).Methods("POST")
 
 	log.Println("[web] starting server at:", address)
 	http.Handle("/", r)

@@ -7,7 +7,8 @@ import (
     "github.com/samalba/dockerclient"
     "crypto/tls"
     "path/filepath"
-    "crypto/x509")
+    "crypto/x509"
+    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model")
 
 
 func config() (*dockerclient.DockerClient, error) {
@@ -54,7 +55,7 @@ func config() (*dockerclient.DockerClient, error) {
     return dockerclient.NewDockerClient(dockerHost, tlsConfig)
 }
 
-func execute(c Container) (err error) {
+func execute(c model.Container) (err error) {
     docker, err := config();
     if err != nil {
         log.Fatal(" [client] failed to connect to Docker Deamon", err)

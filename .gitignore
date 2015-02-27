@@ -13,3 +13,5 @@
 *.a
 *.so
 
+
+config/join.json

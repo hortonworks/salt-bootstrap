@@ -4,7 +4,8 @@ import (
     "log"
     "errors"
     "os/exec"
-    "strings")
+    "strings"
+    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model")
 
 func swramConstraints(host string, cmdArgs []string) {
     if(host != ""){
@@ -12,7 +13,7 @@ func swramConstraints(host string, cmdArgs []string) {
     }
 }
 
-func cmdExecute(cmd string, host string, c Container) (outStr string, err error) {
+func cmdExecute(cmd string, host string, c model.Container) (outStr string, err error) {
 
     log.Println("[dockerExecute] Launch container with details: ",  c)
     var cmdArgs []string
