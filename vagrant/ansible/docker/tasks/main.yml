@@ -1,0 +1,8 @@
+---
+- name: Install Docker
+  sudo: yes
+  shell: curl -sL https://get.docker.io/ | sh
+
+- name: Add Users to docker
+  sudo: yes
+  action: user name=vagrant groups="docker" append=yes

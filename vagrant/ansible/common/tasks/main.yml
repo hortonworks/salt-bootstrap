@@ -1,0 +1,9 @@
+---
+- name: Install bridge-utils
+  sudo: yes
+  apt: name=bridge-utils state=latest
+
+- name: Install git
+  sudo: yes
+  apt: name=git state=latest
+

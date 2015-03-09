@@ -1,0 +1,40 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # All Vagrant configuration is done here. The most common configuration
+  # options are documented and commented below. For a complete reference,
+  # please see the online documentation at vagrantup.com.
+
+  # Every Vagrant virtual environment requires a box to build off of.
+  config.vm.box = "ubuntu/trusty64"
+  config.vm.box_check_update = false
+  config.vm.synced_folder "../../", "/cloudbreak-bootstrap"
+
+  config.vm.provider :virtualbox do |vb|
+    vb.customize ["modifyvm", :id, "--memory", "1024"]
+    vb.customize ["modifyvm", :id, "--cpus", "1"]
+  end
+
+  config.vm.define "con0" do |con0|
+    con0.vm.hostname = "con0"
+    con0.vm.network "private_network", ip: "192.168.38.10"
+  end
+
+
+  config.vm.define "con5" do |con5|
+    con5.vm.hostname = "con5"
+    con5.vm.network "private_network", ip: "192.168.38.14"
+
+    con5.vm.provision :ansible do |ansible|
+      ansible.playbook = "../ansible/cluster.yml"
+      # Disable default limit (required with Vagrant 1.5+)
+      ansible.limit = 'all'
+    end
+
+  end
+
+end
