@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model")
@@ -17,11 +16,11 @@ func handleHealthCheck(w http.ResponseWriter, req *http.Request) {
 }
 
 func handleConsulRequest(w http.ResponseWriter, req *http.Request) {
+
 	log.Println("[web] handleConsulRequest executed")
 
-	decoder := json.NewDecoder(req.Body)
 	var consulClusterReq model.ConsulClusterRequest
-	err := decoder.Decode(&consulClusterReq)
+	err := json.NewDecoder(req.Body).Decode(&consulClusterReq)
 	if err != nil {
 		log.Println("[web] [ERROR] couldn't decode json: ", err)
 	}
@@ -34,7 +33,27 @@ func handleConsulRequest(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func handleConsulRelayRequest(w http.ResponseWriter, req *http.Request) {
+
+	log.Println("[web] handleConsulRequest executed")
+
+	decoder := json.NewDecoder(req.Body)
+	var consulClusterReq model.ConsulClusterRequest
+	err := decoder.Decode(&consulClusterReq)
+	if err != nil {
+		log.Println("[web] [ERROR] couldn't decode json: ", err)
+	}
+
+	cResp := relayConsulClusterRequest(consulClusterReq);
+
+	w.Header().Set("Content-Type", "application/json")
+	log.Println("[web] generated response: ", cResp)
+	json.NewEncoder(w).Encode(cResp)
+
+}
+
 func handleContainerRequest(w http.ResponseWriter, req *http.Request) {
+
 	log.Println("[web] launchContainer")
 
 	decoder := json.NewDecoder(req.Body)
@@ -71,18 +90,15 @@ func handleContainerRequest(w http.ResponseWriter, req *http.Request) {
 
 func NewCloudbreakBootstrapWeb() {
 
-	address := ":9090"
+	address := fmt.Sprintf(":%d", determineBootstrapPort())
 
-	port := os.Getenv("CBBOOT_PORT")
-	if port != "" {
-		address = fmt.Sprintf(":%s", port)
-	}
 	log.Println("[web] NewCloudbreakBootstrapWeb")
 
 	r := mux.NewRouter()
 	r.HandleFunc("/cbboot/health", handleHealthCheck).Methods("GET")
-	r.HandleFunc("/cbboot/launch", handleContainerRequest).Methods("POST")
-	r.HandleFunc("/cbboot/consul", handleConsulRequest).Methods("POST")
+	r.HandleFunc("/cbboot/container/launch", handleContainerRequest).Methods("POST")
+	r.HandleFunc("/cbboot/consul/launch", handleConsulRequest).Methods("POST")
+	r.HandleFunc("/cbboot/consul/relay", handleConsulRelayRequest).Methods("POST")
 
 	log.Println("[web] starting server at:", address)
 	http.Handle("/", r)

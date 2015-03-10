@@ -2,7 +2,6 @@ package cbboot
 
 import (
     "log"
-    "net"
 
     "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
     "encoding/json"
@@ -21,6 +20,7 @@ func executeConsulBootstrap(consulClusterReq  model.ConsulClusterRequest) *model
     cResp := new(model.Response)
 
     advertiseAddress, consulJoin, err := determineConsulJoins(consulClusterReq)
+    cResp.Address = advertiseAddress
 
     if err != nil {
         log.Println("[executeConsulBootstrap] ERROR determineConsulJoins:", err)
@@ -127,23 +127,3 @@ func determineConsulJoins(consulClusterReq  model.ConsulClusterRequest) (string,
 }
 
 
-
-func determineAddresses() (map[string]bool, error) {
-    log.Println("[getIps] getting all available addresses")
-
-    ret := make(map[string]bool)
-
-    addrs, err := net.InterfaceAddrs()
-
-    for _, a := range addrs {
-        if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-            if ipnet.IP.To4() != nil {
-                var ipv4 = ipnet.IP.String()
-                log.Println("[getIps] addr: ", ipv4)
-                ret[ipv4] = true
-            }
-        }
-    }
-
-    return ret, err
-}

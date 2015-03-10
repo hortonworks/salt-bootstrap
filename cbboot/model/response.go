@@ -4,8 +4,9 @@ import "fmt"
 import "strings"
 
 type Response struct {
-	Status    string   `json:"status"`
-	ErrorText    string   `json:"errorText,omitempty"`
+	Status      string   `json:"status"`
+	ErrorText   string   `json:"errorText,omitempty"`
+	Address     string   `json:"address,omitempty"`
 }
 
 
@@ -19,6 +20,6 @@ func (r *Response) Fill(outStr string, err error) {
 }
 
 func (r Response) String() string {
-	return fmt.Sprintf("Response[Status: %s, ErrorText: %", r.Status, r.ErrorText)
+	return fmt.Sprintf("Response[Status: %s, ErrorText: %s]", r.Status, r.ErrorText)
 }
 
