@@ -19,36 +19,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.customize ["modifyvm", :id, "--cpus", "1"]
   end
 
-  config.vm.define "con0" do |con0|
-    con0.vm.hostname = "con0"
-    con0.vm.network "private_network", ip: "192.168.38.10"
-  end
-
   config.vm.define "con1" do |con1|
     con1.vm.hostname = "con1"
-    con1.vm.network "private_network", ip: "192.168.38.11"
+    con1.vm.network "private_network", ip: "192.168.38.10"
   end
 
   config.vm.define "con2" do |con2|
     con2.vm.hostname = "con2"
-    con2.vm.network "private_network", ip: "192.168.38.12"
-  end
+    con2.vm.network "private_network", ip: "192.168.38.15"
 
-  config.vm.define "con3" do |con3|
-    con3.vm.hostname = "con3"
-    con3.vm.network "private_network", ip: "192.168.38.13"
-  end
-
-  config.vm.define "con4" do |con4|
-    con4.vm.hostname = "con4"
-    con4.vm.network "private_network", ip: "192.168.38.14"
-  end
-
-  config.vm.define "con5" do |con5|
-    con5.vm.hostname = "con5"
-    con5.vm.network "private_network", ip: "192.168.38.15"
-
-    con5.vm.provision :ansible do |ansible|
+    con2.vm.provision :ansible do |ansible|
       ansible.playbook = "../ansible/cluster.yml"
       # Disable default limit (required with Vagrant 1.5+)
       ansible.limit = 'all'

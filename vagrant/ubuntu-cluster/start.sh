@@ -20,4 +20,4 @@ export CBBOOT_JOIN_FILE=/home/vagrant/join.json
 
 echo "Staring cloudbreak-bootstrap"
 cd cloudbreak-bootstrap
-go run main.go
+cd /cloudbreak-bootstrap && ./cloudbreak-bootstrap

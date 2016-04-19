@@ -1,0 +1,15 @@
+{
+	"ImportPath": "github.com/sequenceiq/cloudbreak-bootstrap",
+	"GoVersion": "go1.4",
+	"GodepVersion": "v60",
+	"Deps": [
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "49c024275504f0341e5a9971eb7ba7fa3dc7af40"
+		}
+	]
+}
