@@ -60,6 +60,7 @@ func (cr *ConsulConfigRequest) distributeConfig(user string, pass string) (resul
     var wg sync.WaitGroup
     wg.Add(len(cr.Targets))
 
+    recursors := determineDNSRecursors([]string{"8.8.8.8"})
     for _, target := range cr.Targets {
         go func(target string) {
             defer wg.Done()
@@ -67,7 +68,7 @@ func (cr *ConsulConfigRequest) distributeConfig(user string, pass string) (resul
                 DataDir:            cr.DataDir,
                 Ui:                 true,
                 ClientAddr:         "0.0.0.0",
-                DNSRecursors:       determineDNSRecursors([]string{"8.8.8.8"}),
+                DNSRecursors:       recursors,
                 DisableUpdateCheck: true,
                 RetryJoin:          cr.Servers,
                 Ports: PortConfig{
