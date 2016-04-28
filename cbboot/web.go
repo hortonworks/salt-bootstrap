@@ -21,6 +21,10 @@ const (
     AmbariRunDistributeEP = RootPath + "/ambari/run/distribute"
     AmbariAgentRunEP = RootPath + "/ambari/agent/run"
     AmbariServerRunEP = RootPath + "/ambari/server/run"
+	SaltRunDistributeEP = RootPath + "/salt/run/distribute"
+	SaltMinionRunEP = RootPath + "/salt/minion/run"
+	SaltServerRunEP = RootPath + "/salt/server/run"
+    SaltServerSetupEP = RootPath + "/salt/server/setup"
 )
 
 func healthCheckHandler(w http.ResponseWriter, req *http.Request) {
@@ -49,6 +53,10 @@ func NewCloudbreakBootstrapWeb() {
     r.Handle(AmbariRunDistributeEP, authenticator.wrap(ambariRunDistributeRequestHandler)).Methods("POST")
     r.Handle(AmbariAgentRunEP, authenticator.wrap(ambariAgentRunRequestHandler)).Methods("POST")
     r.Handle(AmbariServerRunEP, authenticator.wrap(ambariServerRunRequestHandler)).Methods("POST")
+    r.Handle(SaltRunDistributeEP, authenticator.wrap(SaltRunDistributeRequestHandler)).Methods("POST")
+    r.Handle(SaltMinionRunEP, authenticator.wrap(SaltMinionRunRequestHandler)).Methods("POST")
+    r.Handle(SaltServerRunEP, authenticator.wrap(SaltServerRunRequestHandler)).Methods("POST")
+    r.Handle(SaltServerSetupEP, authenticator.wrap(SaltServerSetupRequestHandler)).Methods("POST")
 
     r.Handle("/cbboot/file", authenticator.wrap(fileUploadHandler)).Methods("POST")
 

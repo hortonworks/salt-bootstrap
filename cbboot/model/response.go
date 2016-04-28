@@ -1,9 +1,10 @@
 package model
 
-import "fmt"
 import (
+    "fmt"
     "strings"
     "encoding/json"
+    "net/http"
 )
 
 type Response struct {
@@ -36,3 +37,8 @@ func (r Response) String() string {
     return fmt.Sprintf("Response: %s", string(j))
 }
 
+
+func (r Response) WriteHttp(w http.ResponseWriter) (error) {
+    w.WriteHeader(r.StatusCode)
+    return json.NewEncoder(w).Encode(r)
+}
