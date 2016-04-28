@@ -34,13 +34,14 @@ type ConsulConfig struct {
     DisableUpdateCheck bool       `json:"disable_update_check"`
     RetryJoin          []string   `json:"retry_join"`
     EncryptKey         string     `json:"encrypt,omitempty"`
-    VerifyIncoming     bool       `json:"verify_incoming,omitempty",`
+    VerifyIncoming     bool       `json:"verify_incoming,omitempty"`
     VerifyOutgoing     bool       `json:"verify_outgoing,omitempty"`
     CAFile             string     `json:"ca_file,omitempty"`
     CertFile           string     `json:"cert_file,omitempty"`
     KeyFile            string     `json:"key_file,omitempty"`
     Ports              PortConfig `json:"ports"`
     DNS                DNSConfig  `json:"dns_config"`
+    NodeName           string     `json:"node_name"`
 }
 
 type PortConfig struct {
@@ -212,7 +213,8 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
         json.NewEncoder(w).Encode(cResp)
         return
     }
-
+    hostname, _ := os.Hostname()
+    config.NodeName = hostname
     outStr, err := config.writeToFile()
     if err != nil {
         log.Printf("[consulConfigSaveRequestHandler] failed to execute consul save config: %s", err.Error())
