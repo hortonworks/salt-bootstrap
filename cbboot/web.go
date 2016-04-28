@@ -7,6 +7,8 @@ import (
     "net/http"
     "github.com/gorilla/mux"
     "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
+    "os"
+    "io"
 )
 
 const (
@@ -30,6 +32,13 @@ func healthCheckHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func NewCloudbreakBootstrapWeb() {
+
+    logFile, err := os.OpenFile("/var/log/cbboot.log", os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
+    if err != nil {
+        log.Printf("Error opening log file: %v", err)
+    }
+    defer logFile.Close()
+    log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
     address := fmt.Sprintf(":%d", determineBootstrapPort())
     username, password := determineAuthCredentials()
