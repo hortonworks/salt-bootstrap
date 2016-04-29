@@ -19,13 +19,21 @@ func (r AmbariRunRequest) String() string {
 }
 
 func ambariAgentRunRequestHandler(w http.ResponseWriter, req *http.Request) {
-    log.Printf("[ambariAgentRunRequestHandler] execute consul run request")
-    StartService(w, req, "ambari-agent")
+    log.Printf("[ambariAgentRunRequestHandler] execute ambari-agent run request")
+    resp, err := LaunchService("ambari-agent")
+    if err != nil {
+        log.Printf("[ambariAgentRunRequestHandler] failed to start ambari-agent: %s", err.Error())
+    }
+    resp.WriteHttp(w)
 }
 
 func ambariServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
-    log.Printf("[ambariAgentRunRequestHandler] execute consul run request")
-    StartService(w, req, "ambari-server")
+    log.Printf("[ambariAgentRunRequestHandler] execute ambari-server run request")
+    resp, err := LaunchService("ambari-server")
+    if err != nil {
+        log.Printf("[ambariAgentRunRequestHandler] failed to start ambari-server: %s", err.Error())
+    }
+    resp.WriteHttp(w)
 }
 
 func (amb AmbariRunRequest) distributeRun(user string, pass string) (result []model.Response) {

@@ -229,7 +229,11 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 func consulRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulRunRequestHandler] execute consul run request")
-    StartService(w, req, "consul")
+    resp, err := LaunchService("consul")
+    if err != nil {
+        log.Printf("[consulRunRequestHandler] failed to start consul: %s", err.Error())
+    }
+    resp.WriteHttp(w)
 }
 
 func consulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
