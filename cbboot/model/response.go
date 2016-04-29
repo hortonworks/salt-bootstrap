@@ -5,6 +5,7 @@ import (
     "strings"
     "encoding/json"
     "net/http"
+    "log"
 )
 
 type Response struct {
@@ -37,8 +38,20 @@ func (r Response) String() string {
     return fmt.Sprintf("Response: %s", string(j))
 }
 
-
-func (r Response) WriteHttp(w http.ResponseWriter) (error) {
+func (r Response) WriteHttp(w http.ResponseWriter) (resp Response) {
     w.WriteHeader(r.StatusCode)
-    return json.NewEncoder(w).Encode(r)
+    return EncodeJson(r, w)
+}
+
+func (r Response) WriteBadRequestHttp(w http.ResponseWriter) (resp Response) {
+    w.WriteHeader(http.StatusBadRequest)
+    return EncodeJson(r, w)
+}
+
+func EncodeJson(r Response, w http.ResponseWriter) (resp Response) {
+    err := json.NewEncoder(w).Encode(r)
+    if err != nil {
+        log.Printf("[writehttp] failed to create json from model: %s", err.Error())
+    }
+    return r
 }

@@ -57,22 +57,17 @@ func serverRequestHandler(w http.ResponseWriter, req *http.Request) {
     err := decoder.Decode(&servers)
     if err != nil {
         log.Printf("[serverRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 
     outStr, err := servers.writeToFile()
     if err != nil {
         log.Printf("[serverRequestHandler] failed to write server address to file: %s", err.Error())
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusInternalServerError)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error(), StatusCode:http.StatusInternalServerError}.WriteHttp(w)
     } else {
-        cResp := model.Response{Status: outStr}
+        cResp := model.Response{Status: outStr}.WriteHttp(w)
         log.Printf("[serverRequestHandler] server request executed: %s", cResp.String())
-        json.NewEncoder(w).Encode(cResp)
     }
 }
 

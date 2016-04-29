@@ -31,9 +31,7 @@ func clientDistributionHandler(w http.ResponseWriter, req *http.Request) {
     err := decoder.Decode(&clients)
     if err != nil {
         log.Printf("[clientDistributionHandler] [ERROR] couldn't decode json: %s", err)
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 

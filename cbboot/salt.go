@@ -61,9 +61,7 @@ func SaltRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
     err := decoder.Decode(&run)
     if err != nil {
         log.Printf("[SaltRunDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 

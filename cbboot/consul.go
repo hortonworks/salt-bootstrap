@@ -187,9 +187,7 @@ func consulConfigDistributeRequestHandler(w http.ResponseWriter, req *http.Reque
     err := decoder.Decode(&config)
     if err != nil {
         log.Printf("[consulConfigRequestHandler] [ERROR] couldn't decode json: %s", err)
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 
@@ -208,9 +206,7 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
     err := decoder.Decode(&config)
     if err != nil {
         log.Printf("[consulConfigSaveRequestHandler] [ERROR] couldn't decode json: %s", err)
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
     hostname, _ := os.Hostname()
@@ -218,12 +214,10 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
     outStr, err := config.writeToFile()
     if err != nil {
         log.Printf("[consulConfigSaveRequestHandler] failed to execute consul save config: %s", err.Error())
-        w.WriteHeader(http.StatusInternalServerError)
-        json.NewEncoder(w).Encode(model.Response{ErrorText: err.Error()})
+        model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}.WriteHttp(w)
     } else {
-        cResp := model.Response{Status: outStr}
+        cResp := model.Response{Status: outStr}.WriteHttp(w)
         log.Printf("[consulConfigSaveRequestHandler] save consul request executed: %s", cResp.String())
-        json.NewEncoder(w).Encode(cResp)
     }
 }
 
@@ -244,9 +238,7 @@ func consulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request)
     err := decoder.Decode(&run)
     if err != nil {
         log.Printf("[consulRunDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
-        cResp := model.Response{Status: err.Error()}
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(cResp)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 
