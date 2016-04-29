@@ -27,6 +27,8 @@ const (
 	SaltMinionRunEP = RootPath + "/salt/minion/run"
 	SaltServerRunEP = RootPath + "/salt/server/run"
     SaltServerSetupEP = RootPath + "/salt/server/setup"
+    HostnameDistributeEP = RootPath + "/hostname/distribute"
+    HostnameEP = RootPath + "/hostname"
 )
 
 func healthCheckHandler(w http.ResponseWriter, req *http.Request) {
@@ -66,6 +68,8 @@ func NewCloudbreakBootstrapWeb() {
     r.Handle(SaltMinionRunEP, authenticator.wrap(SaltMinionRunRequestHandler)).Methods("POST")
     r.Handle(SaltServerRunEP, authenticator.wrap(SaltServerRunRequestHandler)).Methods("POST")
     r.Handle(SaltServerSetupEP, authenticator.wrap(SaltServerSetupRequestHandler)).Methods("POST")
+    r.Handle(HostnameDistributeEP, authenticator.wrap(ClientHostnameDistributionHandler)).Methods("POST")
+    r.Handle(HostnameEP, authenticator.wrap(ClientHostnameHandler)).Methods("POST")
 
     r.Handle("/cbboot/file", authenticator.wrap(fileUploadHandler)).Methods("POST")
 

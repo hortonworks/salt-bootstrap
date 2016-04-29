@@ -39,6 +39,9 @@ func (r Response) String() string {
 }
 
 func (r Response) WriteHttp(w http.ResponseWriter) (resp Response) {
+    if r.StatusCode == 0 {
+        r.StatusCode = 200
+    }
     w.WriteHeader(r.StatusCode)
     return EncodeJson(r, w)
 }
