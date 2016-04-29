@@ -229,7 +229,7 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 func consulRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulRunRequestHandler] execute consul run request")
-    startService(w, req, "consul")
+    StartService(w, req, "consul")
 }
 
 func consulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {

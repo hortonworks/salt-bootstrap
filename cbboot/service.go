@@ -7,12 +7,25 @@ import (
     "encoding/json"
 )
 
-func startSystemdService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
+func StartSystemdService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
     return startSrv(w, req, service, true)
 }
 
-func startService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
+func StartService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
     return startSrv(w, req, service, false)
+}
+
+func LaunchService(service string) (resp model.Response, err error) {
+    result, err := execCmd("/bin/systemctl", "start", service)
+    if err != nil {
+        return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
+    }
+    result, err = execCmd("/bin/systemctl", "enable", service)
+    if err != nil {
+        return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
+    }
+    resp = model.Response{Status:result, StatusCode:http.StatusOK}
+    return resp, nil
 }
 
 func startSrv(w http.ResponseWriter, req *http.Request, service string, systemd bool) (out string, err error) {
@@ -34,3 +47,4 @@ func startSrv(w http.ResponseWriter, req *http.Request, service string, systemd 
     }
     return result, err
 }
+
