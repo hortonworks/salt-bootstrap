@@ -8,19 +8,19 @@ import (
 )
 
 func StartSystemdService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
-    return startSrv(w, req, service, true)
+    return StartSrv(w, req, service, true)
 }
 
 func StartService(w http.ResponseWriter, req *http.Request, service string) (out string, err error) {
-    return startSrv(w, req, service, false)
+    return StartSrv(w, req, service, false)
 }
 
 func LaunchService(service string) (resp model.Response, err error) {
-    result, err := execCmd("/bin/systemctl", "start", service)
+    result, err := ExecCmd("/bin/systemctl", "start", service)
     if err != nil {
         return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
     }
-    result, err = execCmd("/bin/systemctl", "enable", service)
+    result, err = ExecCmd("/bin/systemctl", "enable", service)
     if err != nil {
         return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
     }
@@ -28,12 +28,12 @@ func LaunchService(service string) (resp model.Response, err error) {
     return resp, nil
 }
 
-func startSrv(w http.ResponseWriter, req *http.Request, service string, systemd bool) (out string, err error) {
+func StartSrv(w http.ResponseWriter, req *http.Request, service string, systemd bool) (out string, err error) {
     var result string
     if systemd {
-        result, err = execCmd("/bin/systemctl", "start", service)
+        result, err = ExecCmd("/bin/systemctl", "start", service)
     } else {
-        result, err = execCmd("/sbin/service", service, "start")
+        result, err = ExecCmd("/sbin/service", service, "start")
     }
     if err != nil {
         log.Printf("[startService] failed to start %s: %s", service, err.Error())

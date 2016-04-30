@@ -19,7 +19,7 @@ type Servers struct {
     Path    string `  json:"path"`
 }
 
-func (s *Servers) writeToFile() (outStr string, err error) {
+func (s *Servers) WriteToFile() (outStr string, err error) {
     log.Printf("[Servers.writeToFile] %s", s)
 
     file := s.Path
@@ -49,7 +49,7 @@ func (s *Servers) writeToFile() (outStr string, err error) {
     return "Server list successfully appended to " + file, err
 }
 
-func serverRequestHandler(w http.ResponseWriter, req *http.Request) {
+func ServerRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[serverRequestHandler] execute server request")
 
     decoder := json.NewDecoder(req.Body)
@@ -61,7 +61,7 @@ func serverRequestHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-    outStr, err := servers.writeToFile()
+    outStr, err := servers.WriteToFile()
     if err != nil {
         log.Printf("[serverRequestHandler] failed to write server address to file: %s", err.Error())
         model.Response{Status: err.Error(), StatusCode:http.StatusInternalServerError}.WriteHttp(w)

@@ -13,19 +13,19 @@ type Clients struct {
     Path    string     `json:"path"`
 }
 
-func (clients *Clients) distributeAddress(user string, pass string) (result []model.Response) {
+func (clients *Clients) DistributeAddress(user string, pass string) (result []model.Response) {
     log.Printf("[Clients.distributeAddress] Request: %s", clients)
     json, _ := json.Marshal(Servers{Servers:clients.Servers, Path:clients.Path})
-    responses := distribute(clients.Clients, json, ServerSaveEP, user, pass)
+    responses := Distribute(clients.Clients, json, ServerSaveEP, user, pass)
     for resp := range responses {
         result = append(result, resp)
     }
     return result
 }
 
-func (clients *Clients) distributeHostnameRequest(user string, pass string) (result []model.Response) {
+func (clients *Clients) DistributeHostnameRequest(user string, pass string) (result []model.Response) {
     log.Printf("[Clients.distributeHostnameRequest] Request: %s", clients)
-    responses := distribute(clients.Clients, nil, HostnameEP, user, pass)
+    responses := Distribute(clients.Clients, nil, HostnameEP, user, pass)
     for resp := range responses {
         result = append(result, resp)
     }
@@ -34,7 +34,7 @@ func (clients *Clients) distributeHostnameRequest(user string, pass string) (res
 
 func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[ClientHostnameHandler] get FQDN")
-    fqdn, err := execCmd("hostname", "-f")
+    fqdn, err := ExecCmd("hostname", "-f")
     if err != nil {
         log.Printf("[ClientHostnameHandler] failed to retrieve FQDN")
         model.Response{Status: err.Error(), StatusCode:http.StatusInternalServerError}.WriteHttp(w)
@@ -56,14 +56,14 @@ func ClientHostnameDistributionHandler(w http.ResponseWriter, req *http.Request)
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    responses := clients.distributeHostnameRequest(user, pass)
+    user, pass := GetAuthUserPass(req)
+    responses := clients.DistributeHostnameRequest(user, pass)
     cResp := model.Responses{Responses:responses}
     log.Printf("[ClientHostnameRequestHandler] distribute request executed: %s" + cResp.String())
     json.NewEncoder(w).Encode(cResp)
 }
 
-func clientDistributionHandler(w http.ResponseWriter, req *http.Request) {
+func ClientDistributionHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[clientDistributionHandler] execute distribute request")
 
     decoder := json.NewDecoder(req.Body)
@@ -75,8 +75,8 @@ func clientDistributionHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    responses := clients.distributeAddress(user, pass)
+    user, pass := GetAuthUserPass(req)
+    responses := clients.DistributeAddress(user, pass)
     cResp := model.Responses{Responses:responses}
     log.Printf("[clientDistributionHandler] distribute request executed: %s" + cResp.String())
     json.NewEncoder(w).Encode(cResp)

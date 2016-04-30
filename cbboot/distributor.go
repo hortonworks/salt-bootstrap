@@ -12,7 +12,7 @@ import (
     "strconv"
 )
 
-func distribute(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response {
+func Distribute(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response {
     var wg sync.WaitGroup
     wg.Add(len(clients))
     c := make(chan model.Response, len(clients))
@@ -27,7 +27,7 @@ func distribute(clients []string, payload []byte, endpoint string, user string, 
             if (strings.Contains(client, ":")) {
                 clientAddr = client
             } else {
-                clientAddr = client + ":" + strconv.Itoa(determineBootstrapPort())
+                clientAddr = client + ":" + strconv.Itoa(DetermineBootstrapPort())
             }
 
             req, err := http.NewRequest("POST", "http://" + clientAddr + endpoint, bytes.NewBuffer(payload))

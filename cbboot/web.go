@@ -31,7 +31,7 @@ const (
     HostnameEP = RootPath + "/hostname"
 )
 
-func healthCheckHandler(w http.ResponseWriter, req *http.Request) {
+func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[web] handleHealtchCheck executed")
     cResp := model.Response{Status: "OK"}
     json.NewEncoder(w).Encode(cResp)
@@ -46,32 +46,32 @@ func NewCloudbreakBootstrapWeb() {
     defer logFile.Close()
     log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
-    address := fmt.Sprintf(":%d", determineBootstrapPort())
-    username, password := determineAuthCredentials()
+    address := fmt.Sprintf(":%d", DetermineBootstrapPort())
+    username, password := DetermineAuthCredentials()
 
     log.Printf("[web] NewCloudbreakBootstrapWeb")
 
     authenticator := Authenticator{Username:username, Password:password}
 
     r := mux.NewRouter()
-    r.HandleFunc(HealthEP, healthCheckHandler).Methods("GET")
-    r.Handle(ServerSaveEP, authenticator.wrap(serverRequestHandler)).Methods("POST")
-    r.Handle(ServerDistributeEP, authenticator.wrap(clientDistributionHandler)).Methods("POST")
-    r.Handle(ConsulConfigSaveEP, authenticator.wrap(consulConfigSaveRequestHandler)).Methods("POST")
-    r.Handle(ConsulConfigDistributeEP, authenticator.wrap(consulConfigDistributeRequestHandler)).Methods("POST")
-    r.Handle(ConsulRunEP, authenticator.wrap(consulRunRequestHandler)).Methods("POST")
-    r.Handle(ConsulRunDistributeEP, authenticator.wrap(consulRunDistributeRequestHandler)).Methods("POST")
-    r.Handle(AmbariRunDistributeEP, authenticator.wrap(ambariRunDistributeRequestHandler)).Methods("POST")
-    r.Handle(AmbariAgentRunEP, authenticator.wrap(ambariAgentRunRequestHandler)).Methods("POST")
-    r.Handle(AmbariServerRunEP, authenticator.wrap(ambariServerRunRequestHandler)).Methods("POST")
-    r.Handle(SaltRunDistributeEP, authenticator.wrap(SaltRunDistributeRequestHandler)).Methods("POST")
-    r.Handle(SaltMinionRunEP, authenticator.wrap(SaltMinionRunRequestHandler)).Methods("POST")
-    r.Handle(SaltServerRunEP, authenticator.wrap(SaltServerRunRequestHandler)).Methods("POST")
-    r.Handle(SaltServerSetupEP, authenticator.wrap(SaltServerSetupRequestHandler)).Methods("POST")
-    r.Handle(HostnameDistributeEP, authenticator.wrap(ClientHostnameDistributionHandler)).Methods("POST")
-    r.Handle(HostnameEP, authenticator.wrap(ClientHostnameHandler)).Methods("POST")
+    r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
+    r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler)).Methods("POST")
+    r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler)).Methods("POST")
+    r.Handle(ConsulConfigSaveEP, authenticator.Wrap(ConsulConfigSaveRequestHandler)).Methods("POST")
+    r.Handle(ConsulConfigDistributeEP, authenticator.Wrap(ConsulConfigDistributeRequestHandler)).Methods("POST")
+    r.Handle(ConsulRunEP, authenticator.Wrap(ConsulRunRequestHandler)).Methods("POST")
+    r.Handle(ConsulRunDistributeEP, authenticator.Wrap(ConsulRunDistributeRequestHandler)).Methods("POST")
+    r.Handle(AmbariRunDistributeEP, authenticator.Wrap(AmbariRunDistributeRequestHandler)).Methods("POST")
+    r.Handle(AmbariAgentRunEP, authenticator.Wrap(AmbariAgentRunRequestHandler)).Methods("POST")
+    r.Handle(AmbariServerRunEP, authenticator.Wrap(AmbariServerRunRequestHandler)).Methods("POST")
+    r.Handle(SaltRunDistributeEP, authenticator.Wrap(SaltRunDistributeRequestHandler)).Methods("POST")
+    r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler)).Methods("POST")
+    r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler)).Methods("POST")
+    r.Handle(SaltServerSetupEP, authenticator.Wrap(SaltServerSetupRequestHandler)).Methods("POST")
+    r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler)).Methods("POST")
+    r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler)).Methods("POST")
 
-    r.Handle("/cbboot/file", authenticator.wrap(fileUploadHandler)).Methods("POST")
+    r.Handle("/cbboot/file", authenticator.Wrap(FileUploadHandler)).Methods("POST")
 
     log.Printf("[web] starting server at: %s", address)
     http.Handle("/", r)

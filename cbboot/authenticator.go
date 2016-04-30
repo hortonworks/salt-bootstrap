@@ -12,9 +12,9 @@ type Authenticator struct {
     Password string
 }
 
-func (a *Authenticator) wrap(handler func(w http.ResponseWriter, req *http.Request)) http.Handler {
+func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request)) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        valid := checkAuth(a.Username, a.Password, r)
+        valid := CheckAuth(a.Username, a.Password, r)
         if !valid {
             w.WriteHeader(http.StatusUnauthorized)
             w.Write([]byte("401 Unauthorized"))
@@ -25,8 +25,8 @@ func (a *Authenticator) wrap(handler func(w http.ResponseWriter, req *http.Reque
     })
 }
 
-func checkAuth(user string, pass string, r *http.Request) bool {
-    hUser, hPassword := getAuthUserPass(r)
+func CheckAuth(user string, pass string, r *http.Request) bool {
+    hUser, hPassword := GetAuthUserPass(r)
     result := user == hUser && pass == hPassword
     if !result {
         log.Printf("[auth] invalid autorization header: %s from %s", r.Header.Get("Authorization"), r.Host)
@@ -34,7 +34,7 @@ func checkAuth(user string, pass string, r *http.Request) bool {
     return result
 }
 
-func getAuthUserPass(r *http.Request) (string, string) {
+func GetAuthUserPass(r *http.Request) (string, string) {
     s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
     if len(s) != 2 || s[0] != "Basic" {
         log.Printf("[auth] Missing Basic authorization header")

@@ -8,7 +8,7 @@ import (
 )
 
 //http://play.golang.org/p/MrE9BwNbB1
-func fileUploadHandler(w http.ResponseWriter, req *http.Request) {
+func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[fileUploadHandler] execute file upload")
 
     file, header, err := req.FormFile("file")

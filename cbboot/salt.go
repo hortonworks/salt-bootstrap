@@ -22,12 +22,12 @@ func (r SaltRunRequest) String() string {
     return fmt.Sprintf(string(b))
 }
 
-func (salt SaltRunRequest) distributeRun(user string, pass string) (result []model.Response) {
+func (salt SaltRunRequest) DistributeRun(user string, pass string) (result []model.Response) {
     log.Printf("[distributeRun] distribute salt run command to targets: %s", salt.String())
-    for res := range distribute(salt.Minions, nil, SaltMinionRunEP, user, pass) {
+    for res := range Distribute(salt.Minions, nil, SaltMinionRunEP, user, pass) {
         result = append(result, res)
     }
-    result = append(result, <-distribute([]string{salt.Server}, nil, SaltServerRunEP, user, pass))
+    result = append(result, <-Distribute([]string{salt.Server}, nil, SaltServerRunEP, user, pass))
     return result
 }
 
@@ -65,8 +65,8 @@ func SaltRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    result := run.distributeRun(user, pass)
+    user, pass := GetAuthUserPass(req)
+    result := run.DistributeRun(user, pass)
     cResp := model.Responses{Responses:result}
     log.Printf("[SaltRunDistributeRequestHandler] distribute salt run command request executed: %s", cResp.String())
     json.NewEncoder(w).Encode(cResp)

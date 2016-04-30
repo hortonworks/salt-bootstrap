@@ -8,7 +8,7 @@ import (
     "strings"
 )
 
-func determineAddresses() (map[string]bool, error) {
+func DetermineAddresses() (map[string]bool, error) {
     log.Printf("[getIps] getting all available addresses")
 
     ret := make(map[string]bool)
@@ -28,7 +28,7 @@ func determineAddresses() (map[string]bool, error) {
     return ret, err
 }
 
-func determineBootstrapPort() (int) {
+func DetermineBootstrapPort() (int) {
 
     portStr := os.Getenv("CBBOOT_PORT")
     log.Printf("[determineBootstrapPort] CBBOOT_PORT: %s", portStr)
@@ -41,7 +41,7 @@ func determineBootstrapPort() (int) {
     return port
 }
 
-func determineAuthCredentials() (string, string) {
+func DetermineAuthCredentials() (string, string) {
     username := os.Getenv("CBBOOT_USERNAME")
     password := os.Getenv("CBBOOT_PASSWORD")
     log.Printf("[determineAuthCredentials] CBBOOT_USERNAME: %s CBBOOT_PASSWORD: %s", username, password)

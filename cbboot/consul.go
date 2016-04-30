@@ -56,12 +56,12 @@ type DNSConfig struct {
     NodeTTL    string `json:"node_ttl"`
 }
 
-func (cr *ConsulConfigRequest) distributeConfig(user string, pass string) (result []model.Response) {
+func (cr *ConsulConfigRequest) DistributeConfig(user string, pass string) (result []model.Response) {
 
     var wg sync.WaitGroup
     wg.Add(len(cr.Targets))
 
-    recursors := determineDNSRecursors([]string{"8.8.8.8"})
+    recursors := DetermineDNSRecursors([]string{"8.8.8.8"})
     for _, target := range cr.Targets {
         go func(target string) {
             defer wg.Done()
@@ -97,7 +97,7 @@ func (cr *ConsulConfigRequest) distributeConfig(user string, pass string) (resul
             }
 
             json, _ := json.Marshal(consulConfig)
-            for resp := range distribute([]string{target}, json, ConsulConfigSaveEP, user, pass) {
+            for resp := range Distribute([]string{target}, json, ConsulConfigSaveEP, user, pass) {
                 result = append(result, resp)
             }
         }(target)
@@ -129,7 +129,7 @@ func IsServer(candidate string, servers[] string) bool {
     return false
 }
 
-func (c *ConsulConfig) writeToFile() (outStr string, err error) {
+func (c *ConsulConfig) WriteToFile() (outStr string, err error) {
     log.Printf("[ConsulConfig.writeToFile] %s", c)
 
     file := c.DataDir + "/consul.json"
@@ -146,15 +146,15 @@ func (c *ConsulConfig) writeToFile() (outStr string, err error) {
     return "Consul config successfully written to " + file, err
 }
 
-func (cr ConsulRunRequest) distributeRun(user string, pass string) (result []model.Response) {
+func (cr ConsulRunRequest) DistributeRun(user string, pass string) (result []model.Response) {
     log.Printf("[distributeRun] distribute consul run command to targets: %s", strings.Join(cr.Targets, ","))
-    for res := range distribute(cr.Targets, nil, ConsulRunEP, user, pass) {
+    for res := range Distribute(cr.Targets, nil, ConsulRunEP, user, pass) {
         result = append(result, res)
     }
     return result
 }
 
-func determineDNSRecursors(fallbackDNSRecursors []string) []string {
+func DetermineDNSRecursors(fallbackDNSRecursors []string) []string {
     var dnsRecursors []string
     if dat, err := ioutil.ReadFile("/etc/resolv.conf"); err == nil {
         resolvContent := string(dat)
@@ -179,7 +179,7 @@ func determineDNSRecursors(fallbackDNSRecursors []string) []string {
     return dnsRecursors
 }
 
-func consulConfigDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
+func ConsulConfigDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulConfigRequestHandler] execute distribute request")
 
     decoder := json.NewDecoder(req.Body)
@@ -191,14 +191,14 @@ func consulConfigDistributeRequestHandler(w http.ResponseWriter, req *http.Reque
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    result := config.distributeConfig(user, pass)
+    user, pass := GetAuthUserPass(req)
+    result := config.DistributeConfig(user, pass)
     cResp := model.Responses{Responses:result}
     log.Printf("[consulConfigRequestHandler] distribute request executed: %s", cResp.String())
     json.NewEncoder(w).Encode(cResp)
 }
 
-func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
+func ConsulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulConfigSaveRequestHandler] execute save consul config")
 
     decoder := json.NewDecoder(req.Body)
@@ -211,7 +211,7 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
     }
     hostname, _ := os.Hostname()
     config.NodeName = hostname
-    outStr, err := config.writeToFile()
+    outStr, err := config.WriteToFile()
     if err != nil {
         log.Printf("[consulConfigSaveRequestHandler] failed to execute consul save config: %s", err.Error())
         model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}.WriteHttp(w)
@@ -221,7 +221,7 @@ func consulConfigSaveRequestHandler(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-func consulRunRequestHandler(w http.ResponseWriter, req *http.Request) {
+func ConsulRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulRunRequestHandler] execute consul run request")
     resp, err := LaunchService("consul")
     if err != nil {
@@ -230,7 +230,7 @@ func consulRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     resp.WriteHttp(w)
 }
 
-func consulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
+func ConsulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[consulRunDistributeRequestHandler] execute consul run distribute request")
 
     decoder := json.NewDecoder(req.Body)
@@ -242,8 +242,8 @@ func consulRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request)
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    result := run.distributeRun(user, pass)
+    user, pass := GetAuthUserPass(req)
+    result := run.DistributeRun(user, pass)
     cResp := model.Responses{Responses:result}
     log.Printf("[consulRunDistributeRequestHandler] distribute consul run command request executed: %s", cResp.String())
     json.NewEncoder(w).Encode(cResp)

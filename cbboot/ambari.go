@@ -18,7 +18,7 @@ func (r AmbariRunRequest) String() string {
     return fmt.Sprintf(string(b))
 }
 
-func ambariAgentRunRequestHandler(w http.ResponseWriter, req *http.Request) {
+func AmbariAgentRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[ambariAgentRunRequestHandler] execute ambari-agent run request")
     resp, err := LaunchService("ambari-agent")
     if err != nil {
@@ -27,7 +27,7 @@ func ambariAgentRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     resp.WriteHttp(w)
 }
 
-func ambariServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
+func AmbariServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[ambariAgentRunRequestHandler] execute ambari-server run request")
     resp, err := LaunchService("ambari-server")
     if err != nil {
@@ -36,16 +36,16 @@ func ambariServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     resp.WriteHttp(w)
 }
 
-func (amb AmbariRunRequest) distributeRun(user string, pass string) (result []model.Response) {
+func (amb AmbariRunRequest) DistributeRun(user string, pass string) (result []model.Response) {
     log.Printf("[distributeRun] distribute ambari run command to targets: %s", amb.String())
-    for res := range distribute(amb.Agents, nil, AmbariAgentRunEP, user, pass) {
+    for res := range Distribute(amb.Agents, nil, AmbariAgentRunEP, user, pass) {
         result = append(result, res)
     }
-    result = append(result, <-distribute([]string{amb.Server}, nil, AmbariServerRunEP, user, pass))
+    result = append(result, <-Distribute([]string{amb.Server}, nil, AmbariServerRunEP, user, pass))
     return result
 }
 
-func ambariRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
+func AmbariRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[ambariRunDistributeRequestHandler] execute consul run distribute request")
 
     decoder := json.NewDecoder(req.Body)
@@ -57,8 +57,8 @@ func ambariRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request)
         return
     }
 
-    user, pass := getAuthUserPass(req)
-    result := run.distributeRun(user, pass)
+    user, pass := GetAuthUserPass(req)
+    result := run.DistributeRun(user, pass)
     cResp := model.Responses{Responses:result}
     log.Printf("[ambariRunDistributeRequestHandler] distribute consul run command request executed: %s", cResp.String())
     json.NewEncoder(w).Encode(cResp)
