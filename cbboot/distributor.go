@@ -23,10 +23,11 @@ func DistributePayload(clients []string, payloads []Payload, endpoint string, us
     c := make(chan model.Response, len(clients))
 
     for idx, client := range clients {
-        go func(client string) {
+
+        go func(client string, index int) {
             defer wg.Done()
             log.Printf("[distribute] Send request to client: %s", client)
-            log.Printf("[distribute] Request payload: %s", string(payloads[idx].AsByteArray()))
+            log.Printf("[distribute] Request payload: %s", string(payloads[index].AsByteArray()))
 
             var clientAddr string
             if (strings.Contains(client, ":")) {
@@ -35,7 +36,7 @@ func DistributePayload(clients []string, payloads []Payload, endpoint string, us
                 clientAddr = client + ":" + strconv.Itoa(DetermineBootstrapPort())
             }
 
-            req, err := http.NewRequest("POST", "http://" + clientAddr + endpoint, bytes.NewBuffer(payloads[idx].AsByteArray()))
+            req, err := http.NewRequest("POST", "http://" + clientAddr + endpoint, bytes.NewBuffer(payloads[index].AsByteArray()))
             req.Header.Set("Content-Type", "application/json")
             req.SetBasicAuth(user, pass)
 
@@ -59,7 +60,7 @@ func DistributePayload(clients []string, payloads []Payload, endpoint string, us
             log.Printf("[distribute] Request to: %s result: %s", client, response.String())
             c <- response
             defer resp.Body.Close()
-        }(client)
+        }(client, idx)
     }
     wg.Wait()
     close(c)
