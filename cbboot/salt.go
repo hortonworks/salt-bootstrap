@@ -45,6 +45,10 @@ func (saltMinion SaltMinion) AsByteArray() []byte {
 type ConsulGrainConfig struct {
     AdvertiseAddr string     `json:"advertise_addr" yaml:"advertise_addr"`
     DNSRecursors  []string   `json:"recursors" yaml:"recursors"`
+    //needs to be removed, until the pillar is not ready
+    Server        bool       `json:"server" yaml:"server"`
+    //needs to be removed, until the pillar is not ready
+    ServerAddr    []string    `json:"server_addr" yaml:"server_addr"`
 }
 
 type GrainConfig struct {
@@ -91,9 +95,18 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
     recursors := DetermineDNSRecursors([]string{})
 
+    var server bool
+    if saltMinion.Address == saltMinion.Server {
+        server = true
+    } else {
+        server = false
+    }
+
     grainConfig := GrainConfig{
         Consul:            ConsulGrainConfig{
             AdvertiseAddr:      saltMinion.Address,
+            Server:             server,
+            ServerAddr:         []string{saltMinion.Address},
             DNSRecursors:       recursors,
         },
         Roles:             saltMinion.Roles,
