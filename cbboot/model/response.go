@@ -48,6 +48,7 @@ func (r Response) WriteHttp(w http.ResponseWriter) (resp Response) {
 
 func (r Response) WriteBadRequestHttp(w http.ResponseWriter) (resp Response) {
     w.WriteHeader(http.StatusBadRequest)
+    r.StatusCode = http.StatusBadRequest
     return EncodeJson(r, w)
 }
 

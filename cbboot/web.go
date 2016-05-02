@@ -27,6 +27,7 @@ const (
 	SaltMinionRunEP = RootPath + "/salt/minion/run"
 	SaltServerRunEP = RootPath + "/salt/server/run"
     SaltServerSetupEP = RootPath + "/salt/server/setup"
+    SaltPillarEP = RootPath + "/salt/server/pillar"
     HostnameDistributeEP = RootPath + "/hostname/distribute"
     HostnameEP = RootPath + "/hostname"
 )
@@ -68,6 +69,7 @@ func NewCloudbreakBootstrapWeb() {
     r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler)).Methods("POST")
     r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler)).Methods("POST")
     r.Handle(SaltServerSetupEP, authenticator.Wrap(SaltServerSetupRequestHandler)).Methods("POST")
+    r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler)).Methods("POST")
     r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler)).Methods("POST")
     r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler)).Methods("POST")
 
