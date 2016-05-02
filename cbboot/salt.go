@@ -106,7 +106,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
         Consul:            ConsulGrainConfig{
             AdvertiseAddr:      saltMinion.Address,
             Server:             server,
-            ServerAddr:         []string{saltMinion.Address},
+            ServerAddr:         []string{saltMinion.Server},
             DNSRecursors:       recursors,
         },
         Roles:             saltMinion.Roles,
