@@ -9,7 +9,7 @@ import (
 )
 
 type Response struct {
-    Status     string   `json:"status,omitempty"`
+    Status     string   `json:"status"`
     ErrorText  string   `json:"errorText,omitempty"`
     Address    string   `json:"address,omitempty"`
     StatusCode int      `json:"statusCode,omitempty"`

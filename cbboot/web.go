@@ -1,12 +1,10 @@
 package cbboot
 
 import (
-    "encoding/json"
     "fmt"
     "log"
     "net/http"
     "github.com/gorilla/mux"
-    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
     "os"
     "io"
 )
@@ -32,11 +30,6 @@ const (
     HostnameEP = RootPath + "/hostname"
 )
 
-func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {
-    log.Printf("[web] handleHealtchCheck executed")
-    cResp := model.Response{Status: "OK"}
-    json.NewEncoder(w).Encode(cResp)
-}
 
 func NewCloudbreakBootstrapWeb() {
 
