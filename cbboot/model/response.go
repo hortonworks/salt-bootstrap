@@ -13,6 +13,7 @@ type Response struct {
     ErrorText  string   `json:"errorText,omitempty"`
     Address    string   `json:"address,omitempty"`
     StatusCode int      `json:"statusCode,omitempty"`
+    Version    string   `json:"version,omitempty"`
 }
 
 type Responses struct {

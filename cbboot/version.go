@@ -1,3 +1,6 @@
 package cbboot
 
-const Version = "0.0.1"
+var (
+    Version string
+    BuildTime string
+)

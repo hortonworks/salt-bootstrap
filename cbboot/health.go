@@ -1,6 +1,5 @@
 package cbboot
 
-
 import (
     "log"
     "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
@@ -10,6 +9,6 @@ import (
 func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[HealthCheckHandler] handleHealtchCheck executed")
     w.Header().Set("Content-Type", "application/json")
-    model.Response{Status: "OK"}.WriteHttp(w)
+    model.Response{Status: "OK", Version:Version + "-" + BuildTime}.WriteHttp(w)
 }
 

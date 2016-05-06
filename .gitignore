@@ -2,6 +2,8 @@
 ### JetBrains template
 
 *.iml
+release
+build
 
 ## Directory-based project format:
 .idea/
