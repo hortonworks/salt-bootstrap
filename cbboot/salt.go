@@ -16,14 +16,15 @@ type SaltServerSetupRequest struct {
     Password string     `json:"password,omitempty"`
 }
 
-type SaltRunRequest struct {
+type SaltActionRequest struct {
     Minions []SaltMinion   `json:"minions,omitempty"`
     Server  string         `json:"server,omitempty"`
+    Action  string         `json:"action"`
 }
 
 type SaltMinion struct {
     Address string     `json:"address"`
-    Roles   []string   `json:"roles"`
+    Roles   []string   `json:"roles,omitempty"`
     Server  string     `json:"server,omitempty"`
 }
 
@@ -59,27 +60,29 @@ type GrainConfig struct {
     Roles  []string                `json:"roles" yaml:"roles"`
 }
 
-func (r SaltRunRequest) String() string {
+func (r SaltActionRequest) String() string {
     b, _ := json.Marshal(r)
     return fmt.Sprintf(string(b))
 }
 
-func (saltRunRequest SaltRunRequest) distributeRun(user string, pass string) (result []model.Response) {
-    log.Printf("[distributeRun] distribute salt run command to targets: %s", saltRunRequest.String())
+func (actionRequest SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
+    log.Printf("[distributeAction] distribute salt state command to targets: %s", actionRequest.String())
     var targets []string
     var payloads []Payload
-    for _, minion := range saltRunRequest.Minions {
+    for _, minion := range actionRequest.Minions {
         targets = append(targets, minion.Address)
         if minion.Server == "" {
-            minion.Server = saltRunRequest.Server
+            minion.Server = actionRequest.Server
         }
         payloads = append(payloads, minion)
     }
 
-    for res := range DistributePayload(targets, payloads, SaltMinionRunEP, user, pass) {
+    for res := range DistributePayload(targets, payloads, SaltMinionEp + "/" + actionRequest.Action, user, pass) {
         result = append(result, res)
     }
-    result = append(result, <-Distribute([]string{saltRunRequest.Server}, nil, SaltServerRunEP, user, pass))
+    if len(actionRequest.Server) > 0 {
+        result = append(result, <-Distribute([]string{actionRequest.Server}, nil, SaltServerEp + "/" + actionRequest.Action, user, pass))
+    }
     return result
 }
 
@@ -96,7 +99,6 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     }
 
     recursors := DetermineDNSRecursors([]string{})
-
 
     grainConfig := GrainConfig{
         Consul:            ConsulGrainConfig{
@@ -139,6 +141,22 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     resp.WriteHttp(w)
 }
 
+func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
+    log.Printf("[SaltMinionStopRequestHandler] execute salt minion stop request")
+
+    decoder := json.NewDecoder(req.Body)
+    var saltMinion SaltMinion
+    err := decoder.Decode(&saltMinion)
+    if err != nil {
+        log.Printf("[SaltMinionRunRequestHandler] [ERROR] couldn't decode json: %s", err)
+        model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+        return
+    }
+
+    resp, _ := StopService("salt-minion")
+    resp.WriteHttp(w)
+}
+
 func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     log.Printf("[SaltServerRunRequestHandler] execute salt run request")
     resp, err := LaunchService("salt-master")
@@ -148,7 +166,17 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
     }
     resp, _ = LaunchService("salt-api")
     resp.WriteHttp(w)
+}
 
+func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
+    log.Printf("[SaltServerStopRequestHandler] execute salt master stop request")
+    resp, err := StopService("salt-master")
+    resp.WriteHttp(w)
+    if err != nil {
+        return
+    }
+    resp, _ = StopService("salt-api")
+    resp.WriteHttp(w)
 }
 
 func SaltServerSetupRequestHandler(w http.ResponseWriter, req *http.Request) {
@@ -214,21 +242,21 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-func SaltRunDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
-    log.Printf("[SaltRunDistributeRequestHandler] execute SaltRun run distribute request")
+func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
+    log.Printf("[SaltActionDistributeRequestHandler] execute Salt state distribute request")
 
     decoder := json.NewDecoder(req.Body)
-    var saltRunRequest SaltRunRequest
-    err := decoder.Decode(&saltRunRequest)
+    var saltActionRequest SaltActionRequest
+    err := decoder.Decode(&saltActionRequest)
     if err != nil {
-        log.Printf("[SaltRunDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
+        log.Printf("[SaltActionDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
         model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
         return
     }
 
     user, pass := GetAuthUserPass(req)
-    result := saltRunRequest.distributeRun(user, pass)
+    result := saltActionRequest.distributeAction(user, pass)
     cResp := model.Responses{Responses:result}
-    log.Printf("[SaltRunDistributeRequestHandler] distribute salt run command request executed: %s", cResp.String())
+    log.Printf("[SaltActionDistributeRequestHandler] distribute salt state command request executed: %s", cResp.String())
     json.NewEncoder(w).Encode(cResp)
 }
