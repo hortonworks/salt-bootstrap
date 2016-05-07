@@ -1,6 +1,6 @@
 BINARY=cloudbreak-bootstrap
 
-VERSION=0.0.1
+VERSION=0.0.2
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/sequenceiq/cloudbreak-bootstrap/cbboot.Version=${VERSION} -X github.com/sequenceiq/cloudbreak-bootstrap/cbboot.BuildTime=${BUILD_TIME}"
 
