@@ -1,11 +1,11 @@
-package cbboot
+package saltboot
 
 import (
     "fmt"
     "os"
     "log"
     "net/http"
-    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
+    "github.com/sequenceiq/salt-bootstrap/saltboot/model"
     "encoding/json"
 )
 

@@ -5,14 +5,14 @@ import (
     "log"
     "os"
     "strings"
-    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot"
+    "github.com/sequenceiq/salt-bootstrap/saltboot"
 )
 
 func main() {
     if len(os.Args) > 1 && strings.HasSuffix(os.Args[1], "version") {
-        fmt.Printf("Version: %s-%s", cbboot.Version, cbboot.BuildTime)
+        fmt.Printf("Version: %s-%s", saltboot.Version, saltboot.BuildTime)
         return
     }
-    log.Println("[main] Launch cloudbreak-bootstrap application")
-    cbboot.NewCloudbreakBootstrapWeb()
+    log.Println("[main] Launch salt-bootstrap application")
+    saltboot.NewCloudbreakBootstrapWeb()
 }

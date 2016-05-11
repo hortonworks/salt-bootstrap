@@ -1,4 +1,4 @@
-package cbboot
+package saltboot
 
 var (
     Version string

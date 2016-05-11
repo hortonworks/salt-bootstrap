@@ -16,5 +16,4 @@ build
 *.so
 
 
-config/join.json
-cloudbreak-bootstrap
+salt-bootstrap

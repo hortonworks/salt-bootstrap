@@ -1,4 +1,4 @@
-package cbboot
+package saltboot
 
 import (
     "fmt"
@@ -10,17 +10,10 @@ import (
 )
 
 const (
-    RootPath = "/cbboot"
+    RootPath = "/saltboot"
     HealthEP = RootPath + "/health"
     ServerSaveEP = RootPath + "/server/save"
     ServerDistributeEP = RootPath + "/server/distribute"
-    ConsulConfigSaveEP = RootPath + "/consul/config/save"
-    ConsulConfigDistributeEP = RootPath + "/consul/config/distribute"
-    ConsulRunEP = RootPath + "/consul/run"
-    ConsulRunDistributeEP = RootPath + "/consul/run/distribute"
-    AmbariRunDistributeEP = RootPath + "/ambari/run/distribute"
-    AmbariAgentRunEP = RootPath + "/ambari/agent/run"
-    AmbariServerRunEP = RootPath + "/ambari/server/run"
     SaltActionDistributeEP = RootPath + "/salt/action/distribute"
     SaltMinionEp = RootPath + "/salt/minion"
     SaltServerEp = RootPath + "/salt/server"
@@ -36,7 +29,7 @@ const (
 
 func NewCloudbreakBootstrapWeb() {
 
-    logFile, err := os.OpenFile("/var/log/cbboot.log", os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
+    logFile, err := os.OpenFile("/var/log/saltboot.log", os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
     if err != nil {
         log.Printf("Error opening log file: %v", err)
     }
@@ -55,15 +48,6 @@ func NewCloudbreakBootstrapWeb() {
     r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler)).Methods("POST")
     r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler)).Methods("POST")
 
-    r.Handle(ConsulConfigSaveEP, authenticator.Wrap(ConsulConfigSaveRequestHandler)).Methods("POST")
-    r.Handle(ConsulConfigDistributeEP, authenticator.Wrap(ConsulConfigDistributeRequestHandler)).Methods("POST")
-    r.Handle(ConsulRunEP, authenticator.Wrap(ConsulRunRequestHandler)).Methods("POST")
-    r.Handle(ConsulRunDistributeEP, authenticator.Wrap(ConsulRunDistributeRequestHandler)).Methods("POST")
-
-    r.Handle(AmbariRunDistributeEP, authenticator.Wrap(AmbariRunDistributeRequestHandler)).Methods("POST")
-    r.Handle(AmbariAgentRunEP, authenticator.Wrap(AmbariAgentRunRequestHandler)).Methods("POST")
-    r.Handle(AmbariServerRunEP, authenticator.Wrap(AmbariServerRunRequestHandler)).Methods("POST")
-
     r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler)).Methods("POST")
     r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler)).Methods("POST")
     r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler)).Methods("POST")
@@ -75,7 +59,7 @@ func NewCloudbreakBootstrapWeb() {
     r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler)).Methods("POST")
     r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler)).Methods("POST")
 
-    r.Handle("/cbboot/file", authenticator.Wrap(FileUploadHandler)).Methods("POST")
+    // r.Handle("/saltboot/file", authenticator.Wrap(FileUploadHandler)).Methods("POST")
 
     log.Printf("[web] starting server at: %s", address)
     http.Handle("/", r)

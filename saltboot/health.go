@@ -1,8 +1,8 @@
-package cbboot
+package saltboot
 
 import (
     "log"
-    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
+    "github.com/sequenceiq/salt-bootstrap/saltboot/model"
     "net/http"
 )
 

@@ -1,8 +1,8 @@
-BINARY=cloudbreak-bootstrap
+BINARY=salt-bootstrap
 
-VERSION=0.0.2
+VERSION=0.1.0
 BUILD_TIME=$(shell date +%FT%T)
-LDFLAGS=-ldflags "-X github.com/sequenceiq/cloudbreak-bootstrap/cbboot.Version=${VERSION} -X github.com/sequenceiq/cloudbreak-bootstrap/cbboot.BuildTime=${BUILD_TIME}"
+LDFLAGS=-ldflags "-X github.com/sequenceiq/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/sequenceiq/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 
 deps:
 	go get github.com/gliderlabs/glu

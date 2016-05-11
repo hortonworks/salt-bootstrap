@@ -1,10 +1,10 @@
-package cbboot
+package saltboot
 
 import (
     "log"
     "encoding/json"
     "net/http"
-    "github.com/sequenceiq/cloudbreak-bootstrap/cbboot/model"
+    "github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 type Clients struct {

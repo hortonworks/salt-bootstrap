@@ -1,4 +1,4 @@
-package cbboot
+package saltboot
 
 import (
     "net/http"
