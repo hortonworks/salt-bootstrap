@@ -1,6 +1,0 @@
----
-- name: Install golang
-  sudo: yes
-  apt: name=golang state=latest
-
-

@@ -1,6 +1,0 @@
-- name: Provision common parts
-  hosts: all
-  roles:
-    - common
-    - docker
-    - golang
