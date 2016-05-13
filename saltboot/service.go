@@ -6,19 +6,22 @@ import (
 )
 
 func LaunchService(service string) (resp model.Response, err error) {
-    return SetServiceState(service, "start", "enable")
+    return SetServiceState(service, true)
 }
 
 func StopService(service string) (resp model.Response, err error) {
-    return SetServiceState(service, "stop", "disable")
+    return SetServiceState(service, false)
 }
 
-func SetServiceState(service string, action string, state string) (resp model.Response, err error) {
-    result, err := ExecCmd("/bin/systemctl", action, service)
+func SetServiceState(service string, up bool) (resp model.Response, err error) {
+    initSystem := GetInitSystem()
+    action := initSystem.ActionCommand(service, up)
+    result, err := ExecCmd(action[0], action[1:len(action)]...)
     if err != nil {
         return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
     }
-    result, err = ExecCmd("/bin/systemctl", state, service)
+    state := initSystem.StateCommand(service, up)
+    result, err = ExecCmd(state[0], state[1:len(state)]...)
     if err != nil {
         return model.Response{ErrorText: err.Error(), StatusCode:http.StatusInternalServerError}, err
     }
