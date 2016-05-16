@@ -65,23 +65,23 @@ func (r SaltActionRequest) String() string {
     return fmt.Sprintf(string(b))
 }
 
-func (actionRequest SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
-    log.Printf("[distributeAction] distribute salt state command to targets: %s", actionRequest.String())
+func (r SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
+    log.Printf("[distributeAction] distribute salt state command to targets: %s", r.String())
     var targets []string
     var payloads []Payload
-    for _, minion := range actionRequest.Minions {
+    for _, minion := range r.Minions {
         targets = append(targets, minion.Address)
         if minion.Server == "" {
-            minion.Server = actionRequest.Server
+            minion.Server = r.Server
         }
         payloads = append(payloads, minion)
     }
 
-    for res := range DistributePayload(targets, payloads, SaltMinionEp + "/" + actionRequest.Action, user, pass) {
+    for res := range DistributePayload(targets, payloads, SaltMinionEp + "/" + r.Action, user, pass) {
         result = append(result, res)
     }
-    if len(actionRequest.Server) > 0 {
-        result = append(result, <-Distribute([]string{actionRequest.Server}, nil, SaltServerEp + "/" + actionRequest.Action, user, pass))
+    if len(r.Server) > 0 {
+        result = append(result, <-Distribute([]string{r.Server}, nil, SaltServerEp + "/" + r.Action, user, pass))
     }
     return result
 }
