@@ -23,9 +23,10 @@ type SaltActionRequest struct {
 }
 
 type SaltMinion struct {
-    Address string     `json:"address"`
-    Roles   []string   `json:"roles,omitempty"`
-    Server  string     `json:"server,omitempty"`
+    Address   string     `json:"address"`
+    Roles     []string   `json:"roles,omitempty"`
+    Server    string     `json:"server,omitempty"`
+    HostGroup string     `json:"hostGroup,omitempty"`
 }
 
 type SaltPillar struct {
@@ -38,26 +39,9 @@ func (saltMinion SaltMinion) AsByteArray() []byte {
     return b
 }
 
-//consul:
-//    advertise_addr: 10.0.0.24
-//    recursors:
-//        - 10.0.0.2
-//        - 8.8.8.8
-//hostgroup: hostgroup_3
-//roles:
-//    - ambari_server
-//    - ambari_agent
-
-
-type ConsulGrainConfig struct {
-    AdvertiseAddr string     `json:"advertise_addr" yaml:"advertise_addr"`
-    DNSRecursors  []string   `json:"recursors" yaml:"recursors"`
-}
-
 type GrainConfig struct {
-    Consul ConsulGrainConfig       `json:"consul" yaml:"consul"`
-    //    HostGroup           string                  `json:"hostgroup yaml:"hostgroup"`
-    Roles  []string                `json:"roles" yaml:"roles"`
+    HostGroup string     `json:"hostgroup" yaml:"hostgroup"`
+    Roles     []string   `json:"roles" yaml:"roles"`
 }
 
 func (r SaltActionRequest) String() string {
@@ -98,16 +82,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-    recursors := DetermineDNSRecursors([]string{})
-
-    grainConfig := GrainConfig{
-        Consul:            ConsulGrainConfig{
-            AdvertiseAddr:      saltMinion.Address,
-            DNSRecursors:       recursors,
-        },
-        Roles:             saltMinion.Roles,
-    }
-
+    grainConfig := GrainConfig{Roles:saltMinion.Roles, HostGroup:saltMinion.HostGroup}
     grainYaml, err := yaml.Marshal(grainConfig)
     var resp model.Response;
     if err != nil {
