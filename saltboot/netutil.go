@@ -41,7 +41,7 @@ func DetermineBootstrapPort() int {
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		port = 7070
-		log.Printf("[determineBootstrapPort] using default port: %s", port)
+		log.Printf("[determineBootstrapPort] using default port: %d", port)
 	}
 
 	return port
