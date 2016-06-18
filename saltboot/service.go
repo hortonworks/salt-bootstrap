@@ -1,8 +1,9 @@
 package saltboot
 
 import (
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"net/http"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 func LaunchService(service string) (resp model.Response, err error) {

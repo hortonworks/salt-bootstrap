@@ -3,10 +3,11 @@ package saltboot
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 type Server struct {

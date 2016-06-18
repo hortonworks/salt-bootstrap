@@ -1,9 +1,10 @@
 package saltboot
 
 import (
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"log"
 	"net/http"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {

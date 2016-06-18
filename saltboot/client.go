@@ -2,9 +2,10 @@ package saltboot
 
 import (
 	"encoding/json"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"log"
 	"net/http"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 type Clients struct {

@@ -3,13 +3,14 @@ package saltboot
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 type Payload interface {

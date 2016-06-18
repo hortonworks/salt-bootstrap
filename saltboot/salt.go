@@ -3,13 +3,14 @@ package saltboot
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"gopkg.in/yaml.v2"
 )
 
 type SaltServerSetupRequest struct {
