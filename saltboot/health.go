@@ -1,14 +1,14 @@
 package saltboot
 
 import (
-    "log"
-    "github.com/sequenceiq/salt-bootstrap/saltboot/model"
-    "net/http"
+	"log"
+	"net/http"
+
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 )
 
 func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {
-    log.Printf("[HealthCheckHandler] handleHealtchCheck executed")
-    w.Header().Set("Content-Type", "application/json")
-    model.Response{Status: "OK", Version:Version + "-" + BuildTime}.WriteHttp(w)
+	log.Printf("[HealthCheckHandler] handleHealtchCheck executed")
+	w.Header().Set("Content-Type", "application/json")
+	model.Response{Status: "OK", Version: Version + "-" + BuildTime}.WriteHttp(w)
 }
-
