@@ -13,14 +13,19 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type SaltServerSetupRequest struct {
+type SaltActionRequest struct {
+	Master  SaltMaster   `json:"master,omitempty"`
+	Minions []SaltMinion `json:"minions,omitempty"`
+	Action  string       `json:"action"`
+}
+
+type SaltAuth struct {
 	Password string `json:"password,omitempty"`
 }
 
-type SaltActionRequest struct {
-	Minions []SaltMinion `json:"minions,omitempty"`
-	Server  string       `json:"server,omitempty"`
-	Action  string       `json:"action"`
+type SaltMaster struct {
+	Address string     `json:"address"`
+	Auth    SaltAuth   `json:"auth,omitempty"`
 }
 
 type SaltMinion struct {
@@ -40,6 +45,11 @@ func (saltMinion SaltMinion) AsByteArray() []byte {
 	return b
 }
 
+func (saltMaster SaltMaster) AsByteArray() []byte {
+	b, _ := json.Marshal(saltMaster)
+	return b
+}
+
 type GrainConfig struct {
 	HostGroup string   `json:"hostgroup" yaml:"hostgroup"`
 	Roles     []string `json:"roles" yaml:"roles"`
@@ -52,21 +62,22 @@ func (r SaltActionRequest) String() string {
 
 func (r SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
 	log.Printf("[distributeAction] distribute salt state command to targets: %s", r.String())
+
 	var targets []string
-	var payloads []Payload
+	var minionPayload []Payload
 	for _, minion := range r.Minions {
 		targets = append(targets, minion.Address)
 		if minion.Server == "" {
-			minion.Server = r.Server
+			minion.Server = r.Master.Address
 		}
-		payloads = append(payloads, minion)
+		minionPayload = append(minionPayload, minion)
 	}
 
-	for res := range DistributePayload(targets, payloads, SaltMinionEp+"/"+r.Action, user, pass) {
+	for res := range DistributePayload(targets, minionPayload, SaltMinionEp + "/" + r.Action, user, pass) {
 		result = append(result, res)
 	}
-	if len(r.Server) > 0 {
-		result = append(result, <-Distribute([]string{r.Server}, nil, SaltServerEp+"/"+r.Action, user, pass))
+	if len(r.Master.Address) > 0 {
+		result = append(result, <-DistributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp + "/" + r.Action, user, pass))
 	}
 	return result
 }
@@ -135,11 +146,29 @@ func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[SaltServerRunRequestHandler] execute salt run request")
-	resp, err := LaunchService("salt-master")
+
+	decoder := json.NewDecoder(req.Body)
+	var saltMaster SaltMaster
+	err := decoder.Decode(&saltMaster)
+	if err != nil {
+		log.Printf("[SaltServerRunRequestHandler] [ERROR] couldn't decode json: %s", err)
+		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		return
+	}
+
+	resp, err := CreateUser(saltMaster)
 	resp.WriteHttp(w)
 	if err != nil {
 		return
 	}
+
+	resp, err = LaunchService("salt-master")
+	resp.WriteHttp(w)
+
+	if err != nil {
+		return
+	}
+
 	resp, _ = LaunchService("salt-api")
 	resp.WriteHttp(w)
 }
@@ -153,10 +182,6 @@ func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	resp, _ = StopService("salt-api")
 	resp.WriteHttp(w)
-}
-
-func SaltServerSetupRequestHandler(w http.ResponseWriter, req *http.Request) {
-
 }
 
 func (pillar SaltPillar) WritePillar() (outStr string, err error) {
