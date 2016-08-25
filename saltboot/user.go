@@ -44,12 +44,8 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
-		result, err = ExecCmd("adduser", "--password", hash, SALT_USER)
+		result, err = ExecCmd("adduser", "-G", "wheel", "-s", "/bin/false", "--password", hash, SALT_USER)
 
-		if err != nil {
-			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
-		}
-		result, err = ExecCmd("usermod", "-G", "wheel", SALT_USER)
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
