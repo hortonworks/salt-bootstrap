@@ -2,10 +2,8 @@ package saltboot
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -22,7 +20,6 @@ const (
 	SaltMinionStopEP       = SaltMinionEp + "/stop"
 	SaltServerRunEP        = SaltServerEp + "/run"
 	SaltServerStopEP       = SaltServerEp + "/stop"
-	SaltServerSetupEP      = RootPath + "/salt/server/setup"
 	SaltPillarEP           = RootPath + "/salt/server/pillar"
 	HostnameDistributeEP   = RootPath + "/hostname/distribute"
 	HostnameEP             = RootPath + "/hostname"
@@ -30,13 +27,6 @@ const (
 )
 
 func NewCloudbreakBootstrapWeb() {
-
-	logFile, err := os.OpenFile("/var/log/saltboot.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Printf("Error opening log file: %v", err)
-	}
-	defer logFile.Close()
-	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	address := fmt.Sprintf(":%d", DetermineBootstrapPort())
 	username, password := DetermineAuthCredentials()
@@ -55,7 +45,6 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler)).Methods("POST")
 	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler)).Methods("POST")
 	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler)).Methods("POST")
-	r.Handle(SaltServerSetupEP, authenticator.Wrap(SaltServerSetupRequestHandler)).Methods("POST")
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler)).Methods("POST")
 
 	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler)).Methods("POST")
