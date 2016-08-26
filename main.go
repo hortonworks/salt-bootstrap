@@ -24,5 +24,6 @@ func main() {
 	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	log.Println("[main] Launch salt-bootstrap application")
+	log.Printf("[main] Version: %s-%s", saltboot.Version, saltboot.BuildTime)
 	saltboot.NewCloudbreakBootstrapWeb()
 }

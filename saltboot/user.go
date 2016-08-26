@@ -44,7 +44,7 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
-		result, err = ExecCmd("adduser", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
+		result, err = ExecCmd("adduser", "--no-create-home", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
 
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
