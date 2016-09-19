@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -27,13 +29,15 @@ const (
 )
 
 func NewCloudbreakBootstrapWeb() {
-
 	address := fmt.Sprintf(":%d", DetermineBootstrapPort())
-	username, password := DetermineAuthCredentials()
+	securityConfig, err := DetermineSecurityDetails(os.Getenv, homedir.Dir)
+	if err != nil {
+		log.Fatal("[web] Failed to get config details")
+	}
 
-	log.Printf("[web] NewCloudbreakBootstrapWeb")
+	log.Println("[web] NewCloudbreakBootstrapWeb")
 
-	authenticator := Authenticator{Username: username, Password: password}
+	authenticator := Authenticator{Username: securityConfig.Username, Password: securityConfig.Password}
 
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
