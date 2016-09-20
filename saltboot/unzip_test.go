@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -25,11 +24,7 @@ func TestUnzipFileWithDirectorySuccess(t *testing.T) {
 }
 
 func executeTest(t *testing.T, file string) {
-	tempDirName, err := ioutil.TempDir("", "unziptest")
-	if err != nil {
-		t.Errorf("Unable to create temp directory '%s'", err)
-		return
-	}
+	tempDirName, _ := ioutil.TempDir("", "unziptest")
 	func() {
 		buf := new(bytes.Buffer)
 		zipWriter := zip.NewWriter(buf)
@@ -55,5 +50,4 @@ func executeTest(t *testing.T, file string) {
 			t.Errorf("Decompressed content doesn't match '%s' == '%s'", string(testBytes), string(content))
 		}
 	}()
-	os.RemoveAll(tempDirName)
 }
