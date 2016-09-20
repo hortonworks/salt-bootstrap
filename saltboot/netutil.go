@@ -1,34 +1,83 @@
 package saltboot
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
-func DetermineBootstrapPort() int {
+const (
+	defaultPort      = 7070
+	portKey          = "SALTBOOT_PORT"
+	userKey          = "SALTBOOT_USER"
+	passwdKey        = "SALTBOOT_PASSWORD"
+	signKey          = "SALTBOOT_SIGN_KEY"
+	configLocKey     = "SALTBOOT_CONFIG"
+	defaultConfigLoc = ".salt-bootstrap/security-config.yml"
+)
 
-	portStr := os.Getenv("SALTBOOT_PORT")
+type SecurityConfig struct {
+	Username      string `json:"username" yaml:"username"`
+	Password      string `json:"password" yaml:"password"`
+	SignVerifyKey string `json:"signKey" yaml:"signKey"`
+}
+
+func (sc *SecurityConfig) validate() bool {
+	return len(sc.Username) > 0 && len(sc.Password) > 0 && len(sc.SignVerifyKey) > 0
+}
+
+func DetermineBootstrapPort() int {
+	portStr := os.Getenv(portKey)
 	log.Printf("[determineBootstrapPort] SALTBOOT_PORT: %s", portStr)
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		port = 7070
+		port = defaultPort
 		log.Printf("[determineBootstrapPort] using default port: %d", port)
 	}
 
 	return port
 }
 
-func DetermineAuthCredentials() (string, string) {
-	username := os.Getenv("SALTBOOT_USERNAME")
-	password := os.Getenv("SALTBOOT_PASSWORD")
-	log.Printf("[determineAuthCredentials] SALTBOOT_USERNAME: %s SALTBOOT_PASSWORD: %s", username, password)
-
-	if len(strings.TrimSpace(username)) == 0 || len(strings.TrimSpace(password)) == 0 {
-		username = "cbadmin"
-		password = "cbadmin"
-		log.Printf("[determineAuthCredentials] using default credentials, username: %s, password: %s", username, password)
+func DetermineSecurityDetails(getEnv func(key string) string, getHomeDir func() (string, error)) (SecurityConfig, error) {
+	var config SecurityConfig
+	configLoc := strings.TrimSpace(getEnv(configLocKey))
+	if len(configLoc) == 0 {
+		homeDir, err := getHomeDir()
+		if err != nil {
+			return SecurityConfig{}, err
+		}
+		configLoc = homeDir + string(filepath.Separator) + defaultConfigLoc
 	}
-	return username, password
+
+	content, err := ioutil.ReadFile(configLoc)
+	if err != nil {
+		return SecurityConfig{}, err
+	}
+	err = yaml.Unmarshal(content, &config)
+	if err != nil {
+		return SecurityConfig{}, err
+	}
+
+	if u := strings.TrimSpace(getEnv(userKey)); len(u) > 0 {
+		config.Username = u
+	}
+	if p := strings.TrimSpace(getEnv(passwdKey)); len(p) > 0 {
+		config.Password = p
+	}
+	if k := strings.TrimSpace(getEnv(signKey)); len(k) > 0 {
+		config.SignVerifyKey = k
+	}
+
+	if !config.validate() {
+		log.Print("[determineAuthCredentials] Unable to create valid configuration details.")
+		return SecurityConfig{}, fmt.Errorf("Configuration not valid")
+	}
+
+	return config, nil
 }

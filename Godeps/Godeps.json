@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/sequenceiq/salt-bootstrap",
-	"GoVersion": "go1.4",
-	"GodepVersion": "v60",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -10,6 +10,14 @@
 		{
 			"ImportPath": "github.com/gorilla/mux",
 			"Rev": "49c024275504f0341e5a9971eb7ba7fa3dc7af40"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "1111e456ffea841564ac0fa5f69c26ef44dafec9"
 		}
 	]
 }
