@@ -1,7 +1,13 @@
 package saltboot
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"net/http"
 	"testing"
 )
@@ -31,26 +37,66 @@ func TestWrapUserPassNotValid(t *testing.T) {
 	req.Header.Add("Authorization", "Basic "+invalidAuth)
 	writer := new(TestWriter)
 	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {})
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte{})
 	handler.ServeHTTP(writer, req)
 	if writer.status != 401 {
 		t.Errorf("writer.status %d == %d", 401, writer.status)
-	} else if writer.message != "401 Unauthorized" {
-		t.Errorf("writer.message %s == %s", "401 Unauthorized", writer.message)
 	}
 }
 
-func TestWrapUserPassValid(t *testing.T) {
-	req, _ := http.NewRequest("GET", "http://google.com", nil)
+func TestWrapMissingSignature(t *testing.T) {
+	body := bytes.NewBufferString("body")
+	req, _ := http.NewRequest("GET", "http://google.com", body)
 	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
 	req.Header.Add("Authorization", "Basic "+validAuth)
 	writer := new(TestWriter)
 	writer.header = req.Header
 	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {})
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte{})
 	handler.ServeHTTP(writer, req)
-	if writer.header.Get("Content-Type") != "application/json" {
-		t.Errorf("header.Get('Content-Type') %s == %s", "application/json", writer.header.Get("Content-Type"))
+	if writer.status != 406 {
+		t.Errorf("writer.status %d == %d", 406, writer.status)
+	}
+}
+
+func TestWrapInvalidSignature(t *testing.T) {
+	body := bytes.NewBufferString("body")
+	req, _ := http.NewRequest("GET", "http://google.com", body)
+	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
+	req.Header.Add("Authorization", "Basic "+validAuth)
+	req.Header.Add("signature", base64.StdEncoding.EncodeToString([]byte("sign")))
+	writer := new(TestWriter)
+	writer.header = req.Header
+	auth := Authenticator{Username: "user", Password: "pass"}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte("sign"))
+	handler.ServeHTTP(writer, req)
+	if writer.status != 406 {
+		t.Errorf("writer.status %d == %d", 406, writer.status)
+	}
+}
+
+func TestWrapAllValid(t *testing.T) {
+	pk, _ := rsa.GenerateKey(rand.Reader, 2014)
+	pubDer, _ := x509.MarshalPKIXPublicKey(&pk.PublicKey)
+	pubPem := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Headers: nil, Bytes: pubDer})
+
+	content := "body"
+	newHash := crypto.SHA256.New()
+	newHash.Write([]byte(content))
+	sign, _ := rsa.SignPSS(rand.Reader, pk, crypto.SHA256, newHash.Sum(nil), nil)
+
+	body := bytes.NewBufferString(content)
+	req, _ := http.NewRequest("GET", "http://google.com", body)
+	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
+	req.Header.Add("Authorization", "Basic "+validAuth)
+	req.Header.Add("signature", base64.StdEncoding.EncodeToString(sign))
+	writer := new(TestWriter)
+	writer.header = req.Header
+	auth := Authenticator{Username: "user", Password: "pass"}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, pubPem)
+	handler.ServeHTTP(writer, req)
+	if writer.status != 0 {
+		t.Errorf("writer.status %d == %d", 0, writer.status)
 	}
 }
 

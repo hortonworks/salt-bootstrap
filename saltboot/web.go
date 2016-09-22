@@ -38,23 +38,24 @@ func NewCloudbreakBootstrapWeb() {
 	log.Println("[web] NewCloudbreakBootstrapWeb")
 
 	authenticator := Authenticator{Username: securityConfig.Username, Password: securityConfig.Password}
+	signature := []byte(securityConfig.SignVerifyKey)
 
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
-	r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler)).Methods("POST")
-	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler)).Methods("POST")
+	r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler, signature)).Methods("POST")
+	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, signature)).Methods("POST")
 
-	r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler)).Methods("POST")
-	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler)).Methods("POST")
-	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler)).Methods("POST")
-	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler)).Methods("POST")
-	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler)).Methods("POST")
-	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler)).Methods("POST")
+	r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, signature)).Methods("POST")
 
-	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler)).Methods("POST")
-	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler)).Methods("POST")
+	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler, signature)).Methods("POST")
+	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler, signature)).Methods("POST")
 
-	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler)).Methods("POST")
+	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, signature)).Methods("POST")
 
 	log.Printf("[web] starting server at: %s", address)
 	http.Handle("/", r)
