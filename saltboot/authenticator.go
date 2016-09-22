@@ -1,7 +1,13 @@
 package saltboot
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -12,7 +18,7 @@ type Authenticator struct {
 	Password string
 }
 
-func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request)) http.Handler {
+func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request), signatureKey []byte) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		valid := CheckAuth(a.Username, a.Password, r)
 		if !valid {
@@ -20,6 +26,15 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 			w.Write([]byte("401 Unauthorized"))
 			return
 		}
+		signature := strings.TrimSpace(r.Header.Get("signature"))
+		body := new(bytes.Buffer)
+		body.ReadFrom(r.Body)
+		if !CheckSignature(signature, signatureKey, body.Bytes()) {
+			w.WriteHeader(http.StatusNotAcceptable)
+			w.Write([]byte("406 Not Acceptable"))
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		http.HandlerFunc(handler).ServeHTTP(w, r)
 	})
@@ -32,6 +47,32 @@ func CheckAuth(user string, pass string, r *http.Request) bool {
 		log.Printf("[auth] invalid autorization header: %s from %s", r.Header.Get("Authorization"), r.Host)
 	}
 	return result
+}
+
+func CheckSignature(rawSign string, pubPem []byte, data []byte) bool {
+	var err error
+	var sign []byte
+	var pub interface{}
+	sign, err = base64.StdEncoding.DecodeString(rawSign)
+	if err == nil {
+		block, _ := pem.Decode(pubPem)
+		if block != nil {
+			pub, err = x509.ParsePKIXPublicKey(block.Bytes)
+			if err == nil {
+				newHash := crypto.SHA256.New()
+				newHash.Write(data)
+				err = rsa.VerifyPSS(pub.(*rsa.PublicKey), crypto.SHA256, newHash.Sum(nil), sign, nil)
+				if err == nil {
+					return true
+				}
+			}
+		} else {
+			err = errors.New("unable to decode PEM")
+		}
+	}
+	log.Printf("[auth] unable to check signature: %s", err)
+
+	return false
 }
 
 func GetAuthUserPass(r *http.Request) (string, string) {

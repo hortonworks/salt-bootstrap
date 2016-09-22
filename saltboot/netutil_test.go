@@ -6,7 +6,7 @@ func TestConfigfileFoundByEnv(t *testing.T) {
 	getEnv := func(key string) string {
 		switch key {
 		case "SALTBOOT_CONFIG":
-			return "test/.salt-bootstrap/security-config.yml"
+			return "testdata/.salt-bootstrap/security-config.yml"
 		default:
 			return ""
 		}
@@ -24,7 +24,7 @@ func TestConfigfileFoundByHomedir(t *testing.T) {
 		return ""
 	}
 	getHomeDir := func() (string, error) {
-		return "test", nil
+		return "testdata", nil
 	}
 
 	config, _ := DetermineSecurityDetails(getEnv, getHomeDir)
@@ -38,7 +38,7 @@ func TestUsernameAndPasswordAndSignkeyFoundByEnv(t *testing.T) {
 	getEnv := func(key string) string {
 		switch key {
 		case "SALTBOOT_CONFIG":
-			return "test/.salt-bootstrap/security-config.yml"
+			return "testdata/.salt-bootstrap/security-config.yml"
 		case "SALTBOOT_USER":
 			return "name-ower"
 		case "SALTBOOT_PASSWORD":
