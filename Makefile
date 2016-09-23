@@ -7,6 +7,11 @@ LDFLAGS=-ldflags "-X github.com/sequenceiq/salt-bootstrap/saltboot.Version=${VER
 deps:
 	go get github.com/gliderlabs/glu
 
+clean:
+	rm -rf build
+
+all: build
+
 build:
 	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux/${BINARY} main.go
 	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin/${BINARY} main.go
