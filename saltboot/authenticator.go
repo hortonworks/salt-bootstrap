@@ -8,6 +8,8 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -26,13 +28,23 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 			w.Write([]byte("401 Unauthorized"))
 			return
 		}
-		signature := strings.TrimSpace(r.Header.Get("signature"))
-		body := new(bytes.Buffer)
-		body.ReadFrom(r.Body)
-		if !CheckSignature(signature, signatureKey, body.Bytes()) {
-			w.WriteHeader(http.StatusNotAcceptable)
-			w.Write([]byte("406 Not Acceptable"))
-			return
+		if signatureKey != nil {
+			body := new(bytes.Buffer)
+			if strings.Index(r.Header.Get("Content-Type"), "multipart") == 0 {
+				file, _, _ := r.FormFile("file")
+				defer file.Close()
+				ioutil.ReadAll(io.TeeReader(file, body))
+			} else {
+				defer r.Body.Close()
+				ioutil.ReadAll(io.TeeReader(r.Body, body))
+				r.Body = ioutil.NopCloser(body)
+			}
+			signature := strings.TrimSpace(r.Header.Get("signature"))
+			if !CheckSignature(signature, signatureKey, body.Bytes()) {
+				w.WriteHeader(http.StatusNotAcceptable)
+				w.Write([]byte("406 Not Acceptable"))
+				return
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -61,7 +73,8 @@ func CheckSignature(rawSign string, pubPem []byte, data []byte) bool {
 			if err == nil {
 				newHash := crypto.SHA256.New()
 				newHash.Write(data)
-				err = rsa.VerifyPSS(pub.(*rsa.PublicKey), crypto.SHA256, newHash.Sum(nil), sign, nil)
+				opts := rsa.PSSOptions{SaltLength: 20}
+				err = rsa.VerifyPSS(pub.(*rsa.PublicKey), crypto.SHA256, newHash.Sum(nil), sign, &opts)
 				if err == nil {
 					return true
 				}

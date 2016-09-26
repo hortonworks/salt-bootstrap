@@ -46,14 +46,14 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, signature)).Methods("POST")
 
 	r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler, signature)).Methods("POST")
-	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, signature)).Methods("POST")
-	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, signature)).Methods("POST")
-	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, signature)).Methods("POST")
-	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, signature)).Methods("POST")
+	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, nil)).Methods("POST")
+	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, nil)).Methods("POST")
+	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, nil)).Methods("POST")
+	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, nil)).Methods("POST")
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, signature)).Methods("POST")
 
 	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler, signature)).Methods("POST")
-	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler, signature)).Methods("POST")
+	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler, nil)).Methods("POST")
 
 	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, signature)).Methods("POST")
 

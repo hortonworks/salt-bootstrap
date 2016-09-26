@@ -12,7 +12,10 @@ clean:
 
 all: build
 
-build:
+test:
+	go test github.com/sequenceiq/salt-bootstrap/saltboot
+	
+build: test
 	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux/${BINARY} main.go
 	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin/${BINARY} main.go
 
