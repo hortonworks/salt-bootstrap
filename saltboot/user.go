@@ -1,12 +1,12 @@
 package saltboot
 
 import (
-	"log"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
 	"github.com/kless/osutil/user/crypt/sha512_crypt"
+	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"log"
+	"math/rand"
 	"net/http"
 	"time"
-	"math/rand"
 )
 
 const SALT_USER = "saltuser"
