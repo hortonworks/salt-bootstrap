@@ -24,8 +24,8 @@ type SaltAuth struct {
 }
 
 type SaltMaster struct {
-	Address string     `json:"address"`
-	Auth    SaltAuth   `json:"auth,omitempty"`
+	Address string   `json:"address"`
+	Auth    SaltAuth `json:"auth,omitempty"`
 }
 
 type SaltMinion struct {
@@ -61,7 +61,7 @@ func (r SaltActionRequest) String() string {
 }
 
 func (r SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
-	log.Printf("[distributeAction] distribute salt state command to targets: %s", r.String())
+	log.Print("[distributeAction] distribute salt state command to targets")
 
 	var targets []string
 	var minionPayload []Payload
@@ -73,11 +73,12 @@ func (r SaltActionRequest) distributeAction(user string, pass string) (result []
 		minionPayload = append(minionPayload, minion)
 	}
 
-	for res := range DistributePayload(targets, minionPayload, SaltMinionEp + "/" + r.Action, user, pass) {
+	action := strings.ToLower(r.Action)
+	for res := range DistributePayload(targets, minionPayload, SaltMinionEp+"/"+action, user, pass) {
 		result = append(result, res)
 	}
 	if len(r.Master.Address) > 0 {
-		result = append(result, <-DistributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp + "/" + r.Action, user, pass))
+		result = append(result, <-DistributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp+"/"+action, user, pass))
 	}
 	return result
 }
@@ -195,7 +196,6 @@ func (pillar SaltPillar) WritePillar() (outStr string, err error) {
 	}
 
 	yml, _ := yaml.Marshal(pillar.Json)
-	log.Printf("[SaltPillarRequestHandler] generated yaml from json %s", string(yml))
 	err = ioutil.WriteFile(file, yml, 0644)
 	if err != nil {
 		return "Failed to write to " + file, err
@@ -229,9 +229,6 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
 		model.Response{Status: "path cannot contain '..' charachters"}.WriteBadRequestHttp(w)
 		return
 	}
-
-	jsonString, _ := json.Marshal(saltPillar.Json)
-	log.Printf("[SaltPillarRequestHandler] Recieved arbitrary json: %s", jsonString)
 
 	outStr, err := saltPillar.WritePillar()
 	if err != nil {

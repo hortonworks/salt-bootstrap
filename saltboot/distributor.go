@@ -27,7 +27,6 @@ func DistributePayload(clients []string, payloads []Payload, endpoint string, us
 		go func(client string, index int) {
 			defer wg.Done()
 			log.Printf("[distribute] Send request to client: %s", client)
-			log.Printf("[distribute] Request payload: %s", string(payloads[index].AsByteArray()))
 
 			var clientAddr string
 			if strings.Contains(client, ":") {
@@ -77,7 +76,6 @@ func Distribute(clients []string, payload []byte, endpoint string, user string, 
 		go func(client string) {
 			defer wg.Done()
 			log.Printf("[distribute] Send request to client: %s", client)
-			log.Printf("[distribute] Request payload: %s", string(payload))
 
 			var clientAddr string
 			if strings.Contains(client, ":") {
