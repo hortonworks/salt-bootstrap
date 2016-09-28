@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 type Payload interface {

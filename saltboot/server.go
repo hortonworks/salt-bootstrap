@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 type Server struct {

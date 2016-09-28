@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 func HealthCheckHandler(w http.ResponseWriter, req *http.Request) {

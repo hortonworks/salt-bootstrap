@@ -3,7 +3,7 @@ package saltboot
 import (
 	"net/http"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 func LaunchService(service string) (resp model.Response, err error) {

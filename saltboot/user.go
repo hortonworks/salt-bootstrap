@@ -2,7 +2,7 @@ package saltboot
 
 import (
 	"github.com/kless/osutil/user/crypt/sha512_crypt"
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"log"
 	"math/rand"
 	"net/http"

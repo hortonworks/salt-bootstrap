@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"gopkg.in/yaml.v2"
 )
 
