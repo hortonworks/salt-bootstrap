@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sequenceiq/salt-bootstrap/saltboot"
+	"github.com/hortonworks/salt-bootstrap/saltboot"
 )
 
 func main() {

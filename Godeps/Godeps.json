@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/sequenceiq/salt-bootstrap",
+	"ImportPath": "github.com/hortonworks/salt-bootstrap",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
 	"Deps": [

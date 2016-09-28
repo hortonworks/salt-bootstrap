@@ -1,8 +1,8 @@
 package saltboot
 
 import (
-	"github.com/kless/osutil/user/crypt/sha512_crypt"
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
+	"github.com/kless/osutil/user/crypt/sha512_crypt"
 	"log"
 	"math/rand"
 	"net/http"
