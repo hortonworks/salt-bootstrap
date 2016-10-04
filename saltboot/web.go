@@ -32,7 +32,7 @@ func NewCloudbreakBootstrapWeb() {
 	address := fmt.Sprintf(":%d", DetermineBootstrapPort())
 	securityConfig, err := DetermineSecurityDetails(os.Getenv, homedir.Dir)
 	if err != nil {
-		log.Fatal("[web] Failed to get config details")
+		log.Fatalf("[web] Failed to get config details: %s", err.Error())
 	}
 
 	log.Println("[web] NewCloudbreakBootstrapWeb")
