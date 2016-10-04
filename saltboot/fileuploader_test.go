@@ -32,6 +32,7 @@ func TestUpload(t *testing.T) {
 	multiWriter.Close()
 
 	tempDirName, _ := ioutil.TempDir("", "fileuploadertest")
+	defer os.RemoveAll(tempDirName)
 
 	req := httptest.NewRequest("POST", "http://fileupload?path="+tempDirName, body)
 	req.Header.Set("Content-Type", multiWriter.FormDataContentType())
@@ -58,6 +59,8 @@ func TestUploadZip(t *testing.T) {
 	zipWriter.Close()
 
 	tempDirName, _ := ioutil.TempDir("", "fileuploadertest")
+	defer os.RemoveAll(tempDirName)
+
 	zipFileName := filepath.Join(tempDirName, "test.zip")
 	ioutil.WriteFile(zipFileName, buf.Bytes(), 0600)
 

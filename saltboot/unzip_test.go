@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -25,6 +26,8 @@ func TestUnzipFileWithDirectorySuccess(t *testing.T) {
 
 func executeTest(t *testing.T, file string) {
 	tempDirName, _ := ioutil.TempDir("", "unziptest")
+	defer os.RemoveAll(tempDirName)
+
 	func() {
 		buf := new(bytes.Buffer)
 		zipWriter := zip.NewWriter(buf)
