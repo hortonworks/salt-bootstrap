@@ -28,8 +28,23 @@ type SecurityConfig struct {
 	SignVerifyKey string `json:"signKey" yaml:"signKey"`
 }
 
-func (sc *SecurityConfig) validate() bool {
-	return len(sc.Username) > 0 && len(sc.Password) > 0 && len(sc.SignVerifyKey) > 0
+func (sc *SecurityConfig) validate() error {
+	if len(sc.Username) == 0 {
+		return fmt.Errorf("Username is not configred for salt-bootstrap")
+	}
+	if len(sc.Password) == 0 {
+		return fmt.Errorf("Password is not configred for salt-bootstrap")
+	}
+	if len(sc.SignVerifyKey) == 0 {
+		return fmt.Errorf("SignVerifyKey is not configred for salt-bootstrap")
+	}
+	if !strings.Contains(sc.SignVerifyKey, "-----BEGIN PUBLIC KEY-----") {
+		return fmt.Errorf("SignVerifyKey is not valid missing: -----BEGIN PUBLIC KEY-----")
+	}
+	if !strings.Contains(sc.SignVerifyKey, "-----END PUBLIC KEY-----") {
+		return fmt.Errorf("SignVerifyKey is not valid missing: -----END PUBLIC KEY-----")
+	}
+	return nil
 }
 
 func DetermineBootstrapPort() int {
@@ -44,24 +59,24 @@ func DetermineBootstrapPort() int {
 	return port
 }
 
-func DetermineSecurityDetails(getEnv func(key string) string, getHomeDir func() (string, error)) (SecurityConfig, error) {
+func DetermineSecurityDetails(getEnv func(key string) string, getHomeDir func() (string, error)) (*SecurityConfig, error) {
 	var config SecurityConfig
 	configLoc := strings.TrimSpace(getEnv(configLocKey))
 	if len(configLoc) == 0 {
 		homeDir, err := getHomeDir()
 		if err != nil {
-			return SecurityConfig{}, err
+			return nil, err
 		}
 		configLoc = homeDir + string(filepath.Separator) + defaultConfigLoc
 	}
 
 	content, err := ioutil.ReadFile(configLoc)
 	if err != nil {
-		return SecurityConfig{}, err
+		return nil, err
 	}
 	err = yaml.Unmarshal(content, &config)
 	if err != nil {
-		return SecurityConfig{}, err
+		return nil, err
 	}
 
 	if u := strings.TrimSpace(getEnv(userKey)); len(u) > 0 {
@@ -74,10 +89,10 @@ func DetermineSecurityDetails(getEnv func(key string) string, getHomeDir func() 
 		config.SignVerifyKey = k
 	}
 
-	if !config.validate() {
+	err = config.validate()
+	if err != nil {
 		log.Print("[determineAuthCredentials] Unable to create valid configuration details.")
-		return SecurityConfig{}, fmt.Errorf("Configuration not valid")
+		return nil, err
 	}
-
-	return config, nil
+	return &config, nil
 }
