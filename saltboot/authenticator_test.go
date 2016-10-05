@@ -38,8 +38,8 @@ func TestWrapUserPassNotValid(t *testing.T) {
 	invalidAuth := base64.StdEncoding.EncodeToString([]byte("user-pass"))
 	req.Header.Add("Authorization", "Basic "+invalidAuth)
 	writer := new(TestWriter)
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte{})
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte("sign")}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, OPEN)
 	handler.ServeHTTP(writer, req)
 	if writer.status != 401 {
 		t.Errorf("writer.status %d == %d", 401, writer.status)
@@ -53,8 +53,8 @@ func TestWrapMissingSignature(t *testing.T) {
 	req.Header.Add("Authorization", "Basic "+validAuth)
 	writer := new(TestWriter)
 	writer.header = req.Header
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte{})
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte("sign")}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)
 	handler.ServeHTTP(writer, req)
 	if writer.status != 406 {
 		t.Errorf("writer.status %d == %d", 406, writer.status)
@@ -69,8 +69,8 @@ func TestWrapInvalidSignature(t *testing.T) {
 	req.Header.Add("signature", base64.StdEncoding.EncodeToString([]byte("sign")))
 	writer := new(TestWriter)
 	writer.header = req.Header
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte("sign"))
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte("sign")}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)
 	handler.ServeHTTP(writer, req)
 	if writer.status != 406 {
 		t.Errorf("writer.status %d == %d", 406, writer.status)
@@ -95,8 +95,8 @@ func TestWrapAllValid(t *testing.T) {
 	req.Header.Add("signature", base64.StdEncoding.EncodeToString(sign))
 	writer := new(TestWriter)
 	writer.header = req.Header
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, pubPem)
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: pubPem}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)
 	handler.ServeHTTP(writer, req)
 	if writer.status != 0 {
 		t.Errorf("writer.status %d == %d", 0, writer.status)
@@ -127,8 +127,8 @@ func TestWrapUploadAllValid(t *testing.T) {
 	req.Header.Add("signature", base64.StdEncoding.EncodeToString(sign))
 	req.Header.Set("Content-Type", multiWriter.FormDataContentType())
 	writer := httptest.NewRecorder()
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, pubPem)
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: pubPem}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)
 	handler.ServeHTTP(writer, req)
 	if writer.Code != 200 {
 		t.Errorf("writer.status %d == %d", 200, writer.Code)
@@ -153,8 +153,8 @@ func TestWrapSignedByJava(t *testing.T) {
 	req.Header.Add("Authorization", "Basic "+validAuth)
 	req.Header.Add("signature",
 		"SsLHxVfUQYFHDEsZxEhjWEtN40UNC604nFw9wSNqE0x5H2Ey8UqaPB8g/I+LAK9e1ty7IBE0c4d+ZQcyNWBrxjpH+rUwgHJr9X8XE9irz8E5HiDN5wTkLap1zWmzWSwzAc2fuO5kN61lZlZnKyI3+qTLZ2G6gypl3a7HLq858zU083AoQ2NcAWYAGUubsRcUdJyhJwyg7b9w009FDBAj9DO+GSYPp6TkYW1E1ghDsQPHKoQU+qNRvL45xO9217DBzJlF3OOUusTUkpyXSg9X5sw0Eng1Tvyp8phr0q9o+pIixxZdoZGcnZtWhQBe1KNmH2yBQVZehit1iRt9DxHPoQ==")
-	auth := Authenticator{Username: "user", Password: "pass"}
-	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, []byte(securityConfig.SignVerifyKey))
+	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte(securityConfig.SignVerifyKey)}
+	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)
 	writer := new(TestWriter)
 	writer.header = make(map[string][]string)
 
