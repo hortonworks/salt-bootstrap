@@ -12,12 +12,24 @@
 			"Rev": "49c024275504f0341e5a9971eb7ba7fa3dc7af40"
 		},
 		{
-			"ImportPath": "gopkg.in/yaml.v2",
-			"Rev": "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e"
+			"ImportPath": "github.com/kless/osutil/user/crypt",
+			"Rev": "3ac994847c4376a4b905fc0a19f450c5a4bec647"
+		},
+		{
+			"ImportPath": "github.com/kless/osutil/user/crypt/common",
+			"Rev": "3ac994847c4376a4b905fc0a19f450c5a4bec647"
+		},
+		{
+			"ImportPath": "github.com/kless/osutil/user/crypt/sha512_crypt",
+			"Rev": "3ac994847c4376a4b905fc0a19f450c5a4bec647"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/go-homedir",
 			"Rev": "1111e456ffea841564ac0fa5f69c26ef44dafec9"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e"
 		}
 	]
 }
