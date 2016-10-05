@@ -1,6 +1,6 @@
 BINARY=salt-bootstrap
 
-VERSION=0.9.0
+VERSION=0.9.1
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/hortonworks/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/hortonworks/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 GOFILES = $(shell find . -type f -name '*.go')
@@ -39,5 +39,7 @@ docker_env_up:
 docker_env_rm:
 	docker-compose -f docker/docker-compose.yml stop -t 0
 	docker-compose -f docker/docker-compose.yml rm --all -f
+
+.DEFAULT_GOAL := build
 
 .PHONY: build

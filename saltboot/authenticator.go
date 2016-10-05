@@ -12,23 +12,51 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+
+	"fmt"
+	homedir "github.com/mitchellh/go-homedir"
+)
+
+type SignatureMethod int
+
+const (
+	SIGNED SignatureMethod = iota
+	OPEN
 )
 
 type Authenticator struct {
-	Username string
-	Password string
+	Username     string
+	Password     string
+	SignatureKey []byte
 }
 
-func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request), signatureKey []byte) http.Handler {
+func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request), signatureMethod SignatureMethod) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0 {
+			log.Printf("[Authenticator] missing Username, Password or SignatureKey we are going to load it")
+			securityConfig, err := DetermineSecurityDetails(os.Getenv, homedir.Dir)
+			if err != nil {
+				errorMsg := fmt.Sprintf("Failed to get security config: %s", err.Error())
+				log.Printf("[Authenticator] %s", errorMsg)
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte("401 Unauthorized: " + errorMsg))
+				return
+			}
+
+			a.Username = securityConfig.Username
+			a.Password = securityConfig.Password
+			a.SignatureKey = []byte(securityConfig.SignVerifyKey)
+		}
+
 		valid := CheckAuth(a.Username, a.Password, r)
 		if !valid {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("401 Unauthorized"))
 			return
 		}
-		if signatureKey != nil {
+		if signatureMethod == SIGNED {
 			body := new(bytes.Buffer)
 			if strings.Index(r.Header.Get("Content-Type"), "multipart") == 0 {
 				file, _, _ := r.FormFile("file")
@@ -40,7 +68,7 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 				r.Body = ioutil.NopCloser(body)
 			}
 			signature := strings.TrimSpace(r.Header.Get("signature"))
-			if !CheckSignature(signature, signatureKey, body.Bytes()) {
+			if !CheckSignature(signature, a.SignatureKey, body.Bytes()) {
 				w.WriteHeader(http.StatusNotAcceptable)
 				w.Write([]byte("406 Not Acceptable"))
 				return
