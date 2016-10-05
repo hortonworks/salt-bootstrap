@@ -62,7 +62,10 @@ func (r SaltActionRequest) String() string {
 
 func (r SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
 	log.Print("[distributeAction] distribute salt state command to targets")
+	return distributeActionImpl(DistributePayload, r, user, pass)
+}
 
+func distributeActionImpl(distributePayload func(clients []string, payloads []Payload, endpoint string, user string, pass string) <-chan model.Response, r SaltActionRequest, user string, pass string) (result []model.Response) {
 	var targets []string
 	var minionPayload []Payload
 	for _, minion := range r.Minions {
@@ -74,11 +77,11 @@ func (r SaltActionRequest) distributeAction(user string, pass string) (result []
 	}
 
 	action := strings.ToLower(r.Action)
-	for res := range DistributePayload(targets, minionPayload, SaltMinionEp+"/"+action, user, pass) {
+	for res := range distributePayload(targets, minionPayload, SaltMinionEp+"/"+action, user, pass) {
 		result = append(result, res)
 	}
 	if len(r.Master.Address) > 0 {
-		result = append(result, <-DistributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp+"/"+action, user, pass))
+		result = append(result, <-distributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp+"/"+action, user, pass))
 	}
 	return result
 }
@@ -104,7 +107,9 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = os.MkdirAll("/etc/salt/minion.d", 0755)
+	baseDir := req.Header.Get("salt-minion-base-dir")
+
+	err = os.MkdirAll(baseDir+"/etc/salt/minion.d", 0755)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
@@ -112,14 +117,14 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	masterConf := []byte("master: " + saltMinion.Server)
-	err = ioutil.WriteFile("/etc/salt/minion.d/master.conf", masterConf, 0644)
+	err = ioutil.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
 		return
 	}
 
-	err = ioutil.WriteFile("/etc/salt/grains", grainYaml, 0644)
+	err = ioutil.WriteFile(baseDir+"/etc/salt/grains", grainYaml, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
@@ -186,11 +191,15 @@ func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (pillar SaltPillar) WritePillar() (outStr string, err error) {
-	file := "/srv/pillar" + pillar.Path
+	return writePillarImpl(pillar, "")
+}
+
+func writePillarImpl(pillar SaltPillar, basePath string) (outStr string, err error) {
+	file := basePath + "/srv/pillar" + pillar.Path
 	dir := file[0:strings.LastIndex(file, "/")]
 
 	log.Printf("[SaltPillar.WritePillar] mkdir %s", dir)
-	err = os.MkdirAll(dir, 0644)
+	err = os.MkdirAll(dir, 0744)
 	if err != nil {
 		return "Failed to create dir " + dir, err
 	}

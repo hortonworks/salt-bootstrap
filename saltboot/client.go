@@ -17,7 +17,11 @@ type Clients struct {
 func (clients *Clients) DistributeAddress(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeAddress] Request: %s", clients)
 	json, _ := json.Marshal(Servers{Servers: clients.Servers, Path: clients.Path})
-	responses := Distribute(clients.Clients, json, ServerSaveEP, user, pass)
+	return distributeImpl(Distribute, clients.Clients, json, ServerSaveEP, user, pass)
+}
+
+func distributeImpl(distribute func(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response, c []string, json []byte, endpoint string, user string, pass string) (result []model.Response) {
+	responses := distribute(c, json, endpoint, user, pass)
 	for resp := range responses {
 		result = append(result, resp)
 	}
@@ -26,11 +30,7 @@ func (clients *Clients) DistributeAddress(user string, pass string) (result []mo
 
 func (clients *Clients) DistributeHostnameRequest(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeHostnameRequest] Request: %s", clients)
-	responses := Distribute(clients.Clients, nil, HostnameEP, user, pass)
-	for resp := range responses {
-		result = append(result, resp)
-	}
-	return result
+	return distributeImpl(Distribute, clients.Clients, nil, HostnameEP, user, pass)
 }
 
 func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {

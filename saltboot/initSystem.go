@@ -50,8 +50,8 @@ func (system InitSystem) Error() string {
 	return "Failed to determine init system"
 }
 
-func GetInitSystem() (system InitSystem) {
-	if _, err := os.Stat("/bin/systemctl"); err == nil {
+func GetInitSystem(stat func(name string) (os.FileInfo, error)) (system InitSystem) {
+	if _, err := stat("/bin/systemctl"); err == nil {
 		log.Printf("[GetInitSystem] /bin/systemctl found, assume systemd")
 		return SYSYEM_D
 	}
