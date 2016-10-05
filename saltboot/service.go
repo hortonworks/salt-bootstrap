@@ -2,6 +2,7 @@ package saltboot
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
@@ -15,7 +16,7 @@ func StopService(service string) (resp model.Response, err error) {
 }
 
 func SetServiceState(service string, up bool) (resp model.Response, err error) {
-	initSystem := GetInitSystem()
+	initSystem := GetInitSystem(os.Stat)
 	action := initSystem.ActionCommand(service, up)
 	result, err := ExecCmd(action[0], action[1:len(action)]...)
 	if err != nil {

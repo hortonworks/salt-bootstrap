@@ -1,6 +1,27 @@
 package saltboot
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
+
+func TestDetermineBootstrapPortDefault(t *testing.T) {
+	port := DetermineBootstrapPort()
+
+	if port != defaultPort {
+		t.Errorf("port not match to default %d == %d", defaultPort, port)
+	}
+}
+
+func TestDetermineBootstrapPortCustom(t *testing.T) {
+	os.Setenv(portKey, "8080")
+
+	port := DetermineBootstrapPort()
+
+	if port != 8080 {
+		t.Errorf("port not match to default %d == %d", 8080, port)
+	}
+}
 
 func TestConfigfileFoundByEnv(t *testing.T) {
 	getEnv := func(key string) string {

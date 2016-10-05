@@ -1,12 +1,13 @@
 package saltboot
 
 import (
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
-	"github.com/kless/osutil/user/crypt/sha512_crypt"
 	"log"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
+	"github.com/kless/osutil/user/crypt/sha512_crypt"
 )
 
 const SALT_USER = "saltuser"
@@ -30,9 +31,9 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 	result := "OK"
 
 	//saltUser, _ := user.Lookup(SALT_USER) //requires cgo
-	_, err = ExecCmd("grep", SALT_USER, "/etc/passwd")
+	out, err := ExecCmd("grep", SALT_USER, "/etc/passwd")
 
-	if err != nil {
+	if len(out) == 0 || err != nil {
 		log.Printf("[CreateUser] user: %s does not exsist and will be created", SALT_USER)
 
 		c := sha512_crypt.New()
