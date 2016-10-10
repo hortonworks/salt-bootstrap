@@ -53,11 +53,11 @@ func TestConfigfileFoundByHomedir(t *testing.T) {
 	getEnv := func(key string) string {
 		return ""
 	}
-	getHomeDir := func() (string, error) {
-		return "testdata", nil
+	getConfigLoc := func() string {
+		return "testdata/.salt-bootstrap/security-config.yml"
 	}
 
-	config, err := DetermineSecurityDetails(getEnv, getHomeDir)
+	config, err := DetermineSecurityDetails(getEnv, getConfigLoc)
 	if err != nil {
 		t.Errorf("Error must be nil")
 	}

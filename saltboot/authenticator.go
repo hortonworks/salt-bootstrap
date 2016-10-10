@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"fmt"
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 type SignatureMethod int
@@ -36,7 +35,7 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0 {
 			log.Printf("[Authenticator] missing Username, Password or SignatureKey we are going to load it")
-			securityConfig, err := DetermineSecurityDetails(os.Getenv, homedir.Dir)
+			securityConfig, err := DetermineSecurityDetails(os.Getenv, defaultSecurityConfigLoc)
 			if err != nil {
 				errorMsg := fmt.Sprintf("Failed to get security config: %s", err.Error())
 				log.Printf("[Authenticator] %s", errorMsg)

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,13 +18,17 @@ const (
 	passwdKey        = "SALTBOOT_PASSWORD"
 	signKey          = "SALTBOOT_SIGN_KEY"
 	configLocKey     = "SALTBOOT_CONFIG"
-	defaultConfigLoc = ".salt-bootstrap/security-config.yml"
+	defaultConfigLoc = "/etc/salt-bootstrap/security-config.yml"
 )
 
 type SecurityConfig struct {
 	Username      string `json:"username" yaml:"username"`
 	Password      string `json:"password" yaml:"password"`
 	SignVerifyKey string `json:"signKey" yaml:"signKey"`
+}
+
+func defaultSecurityConfigLoc() string {
+	return defaultConfigLoc
 }
 
 func (sc *SecurityConfig) validate() error {
@@ -59,15 +62,11 @@ func DetermineBootstrapPort() int {
 	return port
 }
 
-func DetermineSecurityDetails(getEnv func(key string) string, getHomeDir func() (string, error)) (*SecurityConfig, error) {
+func DetermineSecurityDetails(getEnv func(key string) string, securityConfig func() string) (*SecurityConfig, error) {
 	var config SecurityConfig
 	configLoc := strings.TrimSpace(getEnv(configLocKey))
 	if len(configLoc) == 0 {
-		homeDir, err := getHomeDir()
-		if err != nil {
-			return nil, err
-		}
-		configLoc = homeDir + string(filepath.Separator) + defaultConfigLoc
+		configLoc = securityConfig()
 	}
 
 	content, err := ioutil.ReadFile(configLoc)
