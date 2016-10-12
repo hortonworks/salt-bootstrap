@@ -83,7 +83,7 @@ func (r SaltActionRequest) distributeAction(user string, pass string) (result []
 }
 
 func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltMinionRunRequestHandler] execute salt run request")
+	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
 
 	decoder := json.NewDecoder(req.Body)
 	var saltMinion SaltMinion
@@ -93,6 +93,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
+	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
 
 	grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
 	grainYaml, err := yaml.Marshal(grainConfig)
@@ -124,12 +125,24 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		resp.WriteHttp(w)
 		return
 	}
+	psOutput, err := ExecCmd("ps", "aux")
+	alreadyRunning := strings.Contains(psOutput, "salt-minion")
+
+	if alreadyRunning {
+		log.Printf("[SaltMinionRunRequestHandler] salt-minion is already running %s", psOutput)
+		resp = model.Response{StatusCode: http.StatusOK, Status: "salt-minion already running"}
+		resp.WriteHttp(w)
+		return
+	} else {
+		log.Printf("[SaltMinionRunRequestHandler] salt-minion is not running and will be started")
+	}
 	resp, _ = LaunchService("salt-minion")
+	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
 	resp.WriteHttp(w)
 }
 
 func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltMinionStopRequestHandler] execute salt minion stop request")
+	log.Printf("[SaltMinionStopRequestHandler] execute salt-minion stop request")
 
 	decoder := json.NewDecoder(req.Body)
 	var saltMinion SaltMinion
@@ -139,6 +152,7 @@ func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
+	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
 
 	resp, _ := StopService("salt-minion")
 	resp.WriteHttp(w)
