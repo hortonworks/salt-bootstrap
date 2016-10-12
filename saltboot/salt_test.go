@@ -102,7 +102,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 		t.Errorf("couldn't unmarshall grain yaml: %s", err)
 	}
 
-	if os.Getenv(EXECUTED_COMMANDS) != "/sbin/service salt-minion start:/sbin/chkconfig salt-minion on:" {
+	if os.Getenv(EXECUTED_COMMANDS) != "ps aux:/sbin/service salt-minion start:/sbin/chkconfig salt-minion on:" {
 		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
 	}
 }
