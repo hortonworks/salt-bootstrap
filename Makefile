@@ -8,7 +8,8 @@ GOFILES = $(shell find . -type f -name '*.go')
 
 deps:
 	go get github.com/gliderlabs/glu
-	go get github.com/tools/godep
+	go get -u github.com/govend/govend
+	govend -v
 
 clean:
 	rm -rf build
@@ -22,7 +23,7 @@ vet:
 	go vet github.com/hortonworks/salt-bootstrap/saltboot
 
 test:
-	go test github.com/hortonworks/salt-bootstrap/saltboot
+	go test -v -race github.com/hortonworks/salt-bootstrap/saltboot
 
 build: format vet test build-darwin build-linux
 

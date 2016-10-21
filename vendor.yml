@@ -1,0 +1,11 @@
+vendors:
+- path: github.com/gorilla/context
+  rev: 1c83b3eabd45b6d76072b66b746c20815fb2872d
+- path: github.com/gorilla/mux
+  rev: 49c024275504f0341e5a9971eb7ba7fa3dc7af40
+- path: github.com/kless/osutil
+  rev: 3ac994847c4376a4b905fc0a19f450c5a4bec647
+- path: gopkg.in/check.v1
+  rev: 4f90aeace3a26ad7021961c297b22c42160c7b25
+- path: gopkg.in/yaml.v2
+  rev: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
