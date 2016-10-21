@@ -26,6 +26,7 @@ type SaltAuth struct {
 type SaltMaster struct {
 	Address string     `json:"address"`
 	Auth    SaltAuth   `json:"auth,omitempty"`
+	Domain  string     `json:"domain,omitempty"`
 }
 
 type SaltMinion struct {
@@ -33,6 +34,7 @@ type SaltMinion struct {
 	Roles     []string `json:"roles,omitempty"`
 	Server    string   `json:"server,omitempty"`
 	HostGroup string   `json:"hostGroup,omitempty"`
+	Domain    string   `json:"domain,omitempty"`
 }
 
 type SaltPillar struct {
@@ -70,12 +72,16 @@ func (r SaltActionRequest) distributeAction(user string, pass string) (result []
 		if minion.Server == "" {
 			minion.Server = r.Master.Address
 		}
+		if minion.Domain == "" {
+			minion.Domain = r.Master.Domain
+		}
 		minionPayload = append(minionPayload, minion)
 	}
 
 	for res := range DistributePayload(targets, minionPayload, SaltMinionEp + "/" + r.Action, user, pass) {
 		result = append(result, res)
 	}
+
 	if len(r.Master.Address) > 0 {
 		result = append(result, <-DistributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp + "/" + r.Action, user, pass))
 	}
@@ -94,6 +100,11 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
+
+	err = ensureIpv6Resolvable(saltMinion.Domain)
+	if err != nil {
+		log.Printf("[ERROR] while hostfile update: %s", err)
+	}
 
 	grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
 	grainYaml, err := yaml.Marshal(grainConfig)
@@ -168,6 +179,11 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] couldn't decode json: %s", err)
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
+	}
+
+	ensureIpv6Resolvable(saltMaster.Domain)
+	if err != nil {
+		log.Printf("[ERROR] while hostfile update: %s", err)
 	}
 
 	resp, err := CreateUser(saltMaster)
