@@ -35,7 +35,7 @@ func (clients *Clients) DistributeHostnameRequest(user string, pass string) (res
 
 func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[ClientHostnameHandler] get FQDN")
-	fqdn, err := ExecCmd("hostname", "-f")
+	fqdn, err := getHostName()
 	if err != nil {
 		log.Printf("[ClientHostnameHandler] failed to retrieve FQDN")
 		model.Response{Status: err.Error(), StatusCode: http.StatusInternalServerError}.WriteHttp(w)
