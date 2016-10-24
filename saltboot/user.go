@@ -27,7 +27,7 @@ func randStringRunes(n int) string {
 func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 	log.Printf("[CreateUser] execute salt run request")
 
-	result := "OK"
+	result := "Create user: OK"
 
 	//saltUser, _ := user.Lookup(SALT_USER) //requires cgo
 	_, err = ExecCmd("grep", SALT_USER, "/etc/passwd")

@@ -4,9 +4,22 @@ import (
 	"net/http"
 
 	"github.com/sequenceiq/salt-bootstrap/saltboot/model"
+	"log"
+	"strings"
 )
 
 func LaunchService(service string) (resp model.Response, err error) {
+	log.Printf("[LaunchService] check if service: %s is running", service)
+	psOutput, _ := ExecCmd("ps", "aux")
+	alreadyRunning := strings.Contains(psOutput, service)
+
+	if alreadyRunning {
+		log.Printf("[LaunchService] %s is already running %s", service, psOutput)
+		return model.Response{StatusCode: http.StatusOK, Status: service + " is already running"}, nil
+	} else {
+		log.Printf("[LaunchService] %s is not running and will be started", service)
+	}
+
 	return SetServiceState(service, true)
 }
 
