@@ -136,19 +136,9 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		resp.WriteHttp(w)
 		return
 	}
-	psOutput, err := ExecCmd("ps", "aux")
-	alreadyRunning := strings.Contains(psOutput, "salt-minion")
 
-	if alreadyRunning {
-		log.Printf("[SaltMinionRunRequestHandler] salt-minion is already running %s", psOutput)
-		resp = model.Response{StatusCode: http.StatusOK, Status: "salt-minion already running"}
-		resp.WriteHttp(w)
-		return
-	} else {
-		log.Printf("[SaltMinionRunRequestHandler] salt-minion is not running and will be started")
-	}
-	resp, _ = LaunchService("salt-minion")
 	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
+	resp, _ = LaunchService("salt-minion")
 	resp.WriteHttp(w)
 }
 
@@ -186,21 +176,35 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("[ERROR] while hostfile update: %s", err)
 	}
 
+	var responses []model.Response
+
 	resp, err := CreateUser(saltMaster)
-	resp.WriteHttp(w)
 	if err != nil {
+		resp.WriteHttp(w)
 		return
 	}
+	responses = append(responses, resp)
 
 	resp, err = LaunchService("salt-master")
-	resp.WriteHttp(w)
-
 	if err != nil {
+		resp.WriteHttp(w)
 		return
 	}
+	responses = append(responses, resp)
 
-	resp, _ = LaunchService("salt-api")
-	resp.WriteHttp(w)
+	resp, err = LaunchService("salt-api")
+	if err != nil {
+		resp.WriteHttp(w)
+		return
+	}
+	responses = append(responses, resp)
+
+	var message string
+	for _, r := range responses {
+		message += r.Status + "; "
+	}
+	finalResponse := model.Response{Status: message, StatusCode: http.StatusOK}
+	finalResponse.WriteHttp(w)
 }
 
 func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
