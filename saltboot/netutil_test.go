@@ -96,7 +96,7 @@ func TestUsernameAndPasswordAndSignkeyFoundByEnv(t *testing.T) {
 		t.Errorf("Error shall be raised when invalid data is passed")
 	}
 	if !strings.Contains(err.Error(), "-----BEGIN PUBLIC KEY-----") {
-		t.Errorf("Error message shall contain", "-----BEGIN PUBLIC KEY-----", err.Error())
+		t.Errorf("Error message shall contain %s, but %s", "-----BEGIN PUBLIC KEY-----", err.Error())
 	}
 }
 
@@ -124,6 +124,6 @@ func TestUsernameAndPasswordAndSignkeyFoundByEnvWithMissingEnd(t *testing.T) {
 		t.Errorf("Error shall be raised when invalid data is passed")
 	}
 	if !strings.Contains(err.Error(), "-----END PUBLIC KEY-----") {
-		t.Errorf("Error message shall contain", "-----END PUBLIC KEY-----", err.Error())
+		t.Errorf("Error message shall contain %s, but %s", "-----END PUBLIC KEY-----", err.Error())
 	}
 }
