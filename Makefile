@@ -18,10 +18,13 @@ all: build
 format:
 	@gofmt -w ${GOFILES}
 
-test:
-	go test ./...
+vet:
+	go vet github.com/hortonworks/salt-bootstrap/saltboot
 
-build: format test build-darwin build-linux
+test:
+	go test github.com/hortonworks/salt-bootstrap/saltboot
+
+build: format vet test build-darwin build-linux
 
 build-darwin:
 	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin/${BINARY} main.go
