@@ -1,6 +1,6 @@
 BINARY=salt-bootstrap
 
-VERSION=0.3.2
+VERSION=0.3.3
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/sequenceiq/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/sequenceiq/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 
