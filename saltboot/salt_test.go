@@ -102,7 +102,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 		t.Errorf("couldn't unmarshall grain yaml: %s", err)
 	}
 
-	if os.Getenv(EXECUTED_COMMANDS) != "ps aux:/sbin/service salt-minion start:/sbin/chkconfig salt-minion on:" {
+	if os.Getenv(EXECUTED_COMMANDS) != "hostname -f:hostname -i:ps aux:/sbin/service salt-minion start:/sbin/chkconfig salt-minion on:" {
 		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
 	}
 }
@@ -145,7 +145,7 @@ func TestSaltServerRunRequestHandler(t *testing.T) {
 
 	SaltServerRunRequestHandler(w, req)
 
-	pattern := "^grep saltuser /etc/passwd:adduser --no-create-home -G wheel -s /sbin/nologin --password \\$6\\$([a-zA-Z\\$0-9/.]+) saltuser:/sbin/service salt-master start:/sbin/chkconfig salt-master on:/sbin/service salt-api start:/sbin/chkconfig salt-api on:$"
+	pattern := "^hostname -f:hostname -i:grep saltuser /etc/passwd:adduser --no-create-home -G wheel -s /sbin/nologin --password \\$6\\$([a-zA-Z\\$0-9/.]+) saltuser:ps aux:/sbin/service salt-master start:/sbin/chkconfig salt-master on:ps aux:/sbin/service salt-api start:/sbin/chkconfig salt-api on:$"
 	if m, err := regexp.MatchString(pattern, os.Getenv(EXECUTED_COMMANDS)); m == false || err != nil {
 		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
 	}

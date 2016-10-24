@@ -26,6 +26,7 @@ type SaltAuth struct {
 type SaltMaster struct {
 	Address string   `json:"address"`
 	Auth    SaltAuth `json:"auth,omitempty"`
+	Domain  string   `json:"domain,omitempty"`
 }
 
 type SaltMinion struct {
@@ -33,6 +34,7 @@ type SaltMinion struct {
 	Roles     []string `json:"roles,omitempty"`
 	Server    string   `json:"server,omitempty"`
 	HostGroup string   `json:"hostGroup,omitempty"`
+	Domain    string   `json:"domain,omitempty"`
 }
 
 type SaltPillar struct {
@@ -73,6 +75,9 @@ func distributeActionImpl(distributePayload func(clients []string, payloads []Pa
 		if minion.Server == "" {
 			minion.Server = r.Master.Address
 		}
+		if minion.Domain == "" {
+			minion.Domain = r.Master.Domain
+		}
 		minionPayload = append(minionPayload, minion)
 	}
 
@@ -80,6 +85,7 @@ func distributeActionImpl(distributePayload func(clients []string, payloads []Pa
 	for res := range distributePayload(targets, minionPayload, SaltMinionEp+"/"+action, user, pass) {
 		result = append(result, res)
 	}
+
 	if len(r.Master.Address) > 0 {
 		result = append(result, <-distributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp+"/"+action, user, pass))
 	}
@@ -98,6 +104,11 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
+
+	err = ensureIpv6Resolvable(saltMinion.Domain)
+	if err != nil {
+		log.Printf("[ERROR] while hostfile update: %s", err)
+	}
 
 	grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
 	grainYaml, err := yaml.Marshal(grainConfig)
@@ -131,19 +142,9 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		resp.WriteHttp(w)
 		return
 	}
-	psOutput, err := ExecCmd("ps", "aux")
-	alreadyRunning := strings.Contains(psOutput, "salt-minion")
 
-	if alreadyRunning {
-		log.Printf("[SaltMinionRunRequestHandler] salt-minion is already running %s", psOutput)
-		resp = model.Response{StatusCode: http.StatusOK, Status: "salt-minion already running"}
-		resp.WriteHttp(w)
-		return
-	} else {
-		log.Printf("[SaltMinionRunRequestHandler] salt-minion is not running and will be started")
-	}
-	resp, _ = LaunchService("salt-minion")
 	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
+	resp, _ = LaunchService("salt-minion")
 	resp.WriteHttp(w)
 }
 
@@ -176,21 +177,40 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resp, err := CreateUser(saltMaster)
-	resp.WriteHttp(w)
+	ensureIpv6Resolvable(saltMaster.Domain)
 	if err != nil {
+		log.Printf("[ERROR] while hostfile update: %s", err)
+	}
+
+	var responses []model.Response
+
+	resp, err := CreateUser(saltMaster)
+	if err != nil {
+		resp.WriteHttp(w)
 		return
 	}
+	responses = append(responses, resp)
 
 	resp, err = LaunchService("salt-master")
-	resp.WriteHttp(w)
-
 	if err != nil {
+		resp.WriteHttp(w)
 		return
 	}
+	responses = append(responses, resp)
 
-	resp, _ = LaunchService("salt-api")
-	resp.WriteHttp(w)
+	resp, err = LaunchService("salt-api")
+	if err != nil {
+		resp.WriteHttp(w)
+		return
+	}
+	responses = append(responses, resp)
+
+	var message string
+	for _, r := range responses {
+		message += r.Status + "; "
+	}
+	finalResponse := model.Response{Status: message, StatusCode: http.StatusOK}
+	finalResponse.WriteHttp(w)
 }
 
 func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
