@@ -38,10 +38,10 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, SIGNED)).Methods("POST")
 
 	r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler, SIGNED)).Methods("POST")
-	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, OPEN)).Methods("POST")
-	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, OPEN)).Methods("POST")
-	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, OPEN)).Methods("POST")
-	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, OPEN)).Methods("POST")
+	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, SIGNED)).Methods("POST")
 
 	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler, SIGNED)).Methods("POST")

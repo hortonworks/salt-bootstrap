@@ -66,7 +66,7 @@ func TestWrapInvalidSignature(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://google.com", body)
 	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
 	req.Header.Add("Authorization", "Basic "+validAuth)
-	req.Header.Add("signature", base64.StdEncoding.EncodeToString([]byte("sign")))
+	req.Header.Add(SIGNATURE, base64.StdEncoding.EncodeToString([]byte("sign")))
 	writer := new(TestWriter)
 	writer.header = req.Header
 	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte("sign")}
@@ -92,7 +92,7 @@ func TestWrapAllValid(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://google.com", body)
 	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
 	req.Header.Add("Authorization", "Basic "+validAuth)
-	req.Header.Add("signature", base64.StdEncoding.EncodeToString(sign))
+	req.Header.Add(SIGNATURE, base64.StdEncoding.EncodeToString(sign))
 	writer := new(TestWriter)
 	writer.header = req.Header
 	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: pubPem}
@@ -124,7 +124,7 @@ func TestWrapUploadAllValid(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://google.com", body)
 	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
 	req.Header.Add("Authorization", "Basic "+validAuth)
-	req.Header.Add("signature", base64.StdEncoding.EncodeToString(sign))
+	req.Header.Add(SIGNATURE, base64.StdEncoding.EncodeToString(sign))
 	req.Header.Set("Content-Type", multiWriter.FormDataContentType())
 	writer := httptest.NewRecorder()
 	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: pubPem}
@@ -151,7 +151,7 @@ func TestWrapSignedByJava(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://google.com/asd", body)
 	validAuth := base64.StdEncoding.EncodeToString([]byte("user:pass"))
 	req.Header.Add("Authorization", "Basic "+validAuth)
-	req.Header.Add("signature",
+	req.Header.Add(SIGNATURE,
 		"SsLHxVfUQYFHDEsZxEhjWEtN40UNC604nFw9wSNqE0x5H2Ey8UqaPB8g/I+LAK9e1ty7IBE0c4d+ZQcyNWBrxjpH+rUwgHJr9X8XE9irz8E5HiDN5wTkLap1zWmzWSwzAc2fuO5kN61lZlZnKyI3+qTLZ2G6gypl3a7HLq858zU083AoQ2NcAWYAGUubsRcUdJyhJwyg7b9w009FDBAj9DO+GSYPp6TkYW1E1ghDsQPHKoQU+qNRvL45xO9217DBzJlF3OOUusTUkpyXSg9X5sw0Eng1Tvyp8phr0q9o+pIixxZdoZGcnZtWhQBe1KNmH2yBQVZehit1iRt9DxHPoQ==")
 	auth := Authenticator{Username: "user", Password: "pass", SignatureKey: []byte(securityConfig.SignVerifyKey)}
 	handler := auth.Wrap(func(w http.ResponseWriter, req *http.Request) {}, SIGNED)

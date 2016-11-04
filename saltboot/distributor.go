@@ -13,15 +13,10 @@ import (
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
-type Payload interface {
-	AsByteArray() []byte
-}
-
-func DistributePayload(clients []string, payloads []Payload, endpoint string, user string, pass string) <-chan model.Response {
+func DistributeActionRequest(clients []string, request SaltActionRequest, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 	var wg sync.WaitGroup
 	wg.Add(len(clients))
 	c := make(chan model.Response, len(clients))
-
 	for idx, client := range clients {
 
 		go func(client string, index int) {
@@ -35,7 +30,8 @@ func DistributePayload(clients []string, payloads []Payload, endpoint string, us
 				clientAddr = client + ":" + strconv.Itoa(DetermineBootstrapPort())
 			}
 
-			req, err := http.NewRequest("POST", "http://"+clientAddr+endpoint, bytes.NewBuffer(payloads[index].AsByteArray()))
+			req, err := http.NewRequest("POST", "http://"+clientAddr+endpoint+"?index="+strconv.Itoa(index), bytes.NewBufferString(signed))
+			req.Header.Set(SIGNATURE, signature)
 			req.Header.Set("Content-Type", "application/json")
 			req.SetBasicAuth(user, pass)
 

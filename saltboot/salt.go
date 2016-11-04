@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"strconv"
+
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"gopkg.in/yaml.v2"
 )
@@ -62,32 +64,24 @@ func (r SaltActionRequest) String() string {
 	return fmt.Sprintf(string(b))
 }
 
-func (r SaltActionRequest) distributeAction(user string, pass string) (result []model.Response) {
+func (r SaltActionRequest) distributeAction(user string, pass string, signature string, signed string) (result []model.Response) {
 	log.Print("[distributeAction] distribute salt state command to targets")
-	return distributeActionImpl(DistributePayload, r, user, pass)
+	return distributeActionImpl(DistributeActionRequest, r, user, pass, signature, signed)
 }
 
-func distributeActionImpl(distributePayload func(clients []string, payloads []Payload, endpoint string, user string, pass string) <-chan model.Response, r SaltActionRequest, user string, pass string) (result []model.Response) {
+func distributeActionImpl(distributeActionRequest func([]string, SaltActionRequest, string, string, string, string, string) <-chan model.Response, r SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
 	var targets []string
-	var minionPayload []Payload
 	for _, minion := range r.Minions {
 		targets = append(targets, minion.Address)
-		if minion.Server == "" {
-			minion.Server = r.Master.Address
-		}
-		if minion.Domain == "" {
-			minion.Domain = r.Master.Domain
-		}
-		minionPayload = append(minionPayload, minion)
 	}
 
 	action := strings.ToLower(r.Action)
-	for res := range distributePayload(targets, minionPayload, SaltMinionEp+"/"+action, user, pass) {
+	for res := range distributeActionRequest(targets, r, SaltMinionEp+"/"+action, user, pass, signature, signed) {
 		result = append(result, res)
 	}
 
 	if len(r.Master.Address) > 0 {
-		result = append(result, <-distributePayload([]string{r.Master.Address}, []Payload{r.Master}, SaltServerEp+"/"+action, user, pass))
+		result = append(result, <-distributeActionRequest([]string{r.Master.Address}, r, SaltServerEp+"/"+action, user, pass, signature, signed))
 	}
 	return result
 }
@@ -95,24 +89,40 @@ func distributeActionImpl(distributePayload func(clients []string, payloads []Pa
 func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
 
+	var resp model.Response
+
 	decoder := json.NewDecoder(req.Body)
-	var saltMinion SaltMinion
-	err := decoder.Decode(&saltMinion)
+	var saltActionRequest SaltActionRequest
+	err := decoder.Decode(&saltActionRequest)
 	if err != nil {
 		log.Printf("[SaltMinionRunRequestHandler] [ERROR] couldn't decode json: %s", err)
-		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+		resp.WriteHttp(w)
 		return
 	}
-	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
+
+	index, err := strconv.Atoi(req.URL.Query().Get("index"))
+	if err != nil {
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err)
+		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+		resp.WriteHttp(w)
+		return
+	}
+	saltMinion := saltActionRequest.Minions[index]
+	if saltMinion.Server == "" {
+		saltMinion.Server = saltActionRequest.Master.Address
+	}
+	if saltMinion.Domain == "" {
+		saltMinion.Domain = saltActionRequest.Master.Domain
+	}
 
 	err = ensureIpv6Resolvable(saltMinion.Domain)
 	if err != nil {
-		log.Printf("[ERROR] while hostfile update: %s", err)
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err)
 	}
 
 	grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
 	grainYaml, err := yaml.Marshal(grainConfig)
-	var resp model.Response
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
@@ -151,16 +161,6 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[SaltMinionStopRequestHandler] execute salt-minion stop request")
 
-	decoder := json.NewDecoder(req.Body)
-	var saltMinion SaltMinion
-	err := decoder.Decode(&saltMinion)
-	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] couldn't decode json: %s", err)
-		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
-		return
-	}
-	log.Printf("[SaltMinionRunRequestHandler] received json: %s", saltMinion.AsByteArray())
-
 	resp, _ := StopService("salt-minion")
 	resp.WriteHttp(w)
 }
@@ -169,17 +169,18 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[SaltServerRunRequestHandler] execute salt run request")
 
 	decoder := json.NewDecoder(req.Body)
-	var saltMaster SaltMaster
-	err := decoder.Decode(&saltMaster)
+	var saltActionRequest SaltActionRequest
+	err := decoder.Decode(&saltActionRequest)
 	if err != nil {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] couldn't decode json: %s", err)
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
 
+	saltMaster := saltActionRequest.Master
 	ensureIpv6Resolvable(saltMaster.Domain)
 	if err != nil {
-		log.Printf("[ERROR] while hostfile update: %s", err)
+		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err)
 	}
 
 	var responses []model.Response
@@ -296,7 +297,8 @@ func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	}
 
 	user, pass := GetAuthUserPass(req)
-	result := saltActionRequest.distributeAction(user, pass)
+	signature, signed := GetSignatureAndSigned(req)
+	result := saltActionRequest.distributeAction(user, pass, signature, signed)
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltActionDistributeRequestHandler] distribute salt state command request executed: %s", cResp.String())
 	json.NewEncoder(w).Encode(cResp)
