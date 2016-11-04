@@ -14,7 +14,7 @@ import (
 )
 
 func TestDistributeActionImplWithoutMaster(t *testing.T) {
-	distributePayload := func(clients []string, payloads []Payload, endpoint string, user string, pass string) <-chan model.Response {
+	distributeRequest := func(clients []string, request SaltActionRequest, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -28,7 +28,7 @@ func TestDistributeActionImplWithoutMaster(t *testing.T) {
 		Minions: minions,
 	}
 
-	resp := distributeActionImpl(distributePayload, request, "user", "pass")
+	resp := distributeActionImpl(distributeRequest, request, "user", "pass", "", "")
 
 	if len(resp) != len(minions) {
 		t.Errorf("size not match %d == %d", len(minions), len(resp))
@@ -42,7 +42,7 @@ func TestDistributeActionImplWithoutMaster(t *testing.T) {
 }
 
 func TestDistributeActionImplMaster(t *testing.T) {
-	distributePayload := func(clients []string, payloads []Payload, endpoint string, user string, pass string) <-chan model.Response {
+	distributeRequest := func(clients []string, request SaltActionRequest, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -54,7 +54,7 @@ func TestDistributeActionImplMaster(t *testing.T) {
 		Master: SaltMaster{Address: "address"},
 	}
 
-	resp := distributeActionImpl(distributePayload, request, "user", "pass")
+	resp := distributeActionImpl(distributeRequest, request, "user", "pass", "", "")
 
 	if len(resp) != 1 {
 		t.Errorf("size not match %d == %d", 1, len(resp))
@@ -70,17 +70,20 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	tempDirName, _ := ioutil.TempDir("", "saltminionruntest")
 	defer os.RemoveAll(tempDirName)
 
-	minion := SaltMinion{
-		Address:   "address",
-		HostGroup: "group",
-		Server:    "server",
-		Roles:     []string{"role1", "role2"},
+	request := SaltActionRequest{
+		Master: SaltMaster{Address: "address"},
+		Minions: []SaltMinion{{
+			Address:   "address",
+			HostGroup: "group",
+			Server:    "server",
+			Roles:     []string{"role1", "role2"},
+		}},
 	}
 	body := bytes.NewBuffer(make([]byte, 0))
 	encoder := json.NewEncoder(body)
-	encoder.Encode(&minion)
+	encoder.Encode(&request)
 
-	req := httptest.NewRequest("POST", "/", body)
+	req := httptest.NewRequest("POST", "/?index=0", body)
 	req.Header.Set("salt-minion-base-dir", tempDirName)
 	w := httptest.NewRecorder()
 
@@ -111,17 +114,20 @@ func TestSaltMinionStopRequestHandler(t *testing.T) {
 	os.Setenv(ENV_TYPE, "test")
 	defer os.Clearenv()
 
-	minion := SaltMinion{
-		Address:   "address",
-		HostGroup: "group",
-		Server:    "server",
-		Roles:     []string{"role1", "role2"},
+	request := SaltActionRequest{
+		Master: SaltMaster{Address: "address"},
+		Minions: []SaltMinion{{
+			Address:   "address",
+			HostGroup: "group",
+			Server:    "server",
+			Roles:     []string{"role1", "role2"},
+		}},
 	}
 	body := bytes.NewBuffer(make([]byte, 0))
 	encoder := json.NewEncoder(body)
-	encoder.Encode(&minion)
+	encoder.Encode(&request)
 
-	req := httptest.NewRequest("GET", "/", body)
+	req := httptest.NewRequest("GET", "/?index=0", body)
 	w := httptest.NewRecorder()
 
 	SaltMinionStopRequestHandler(w, req)
@@ -140,7 +146,7 @@ func TestSaltServerRunRequestHandler(t *testing.T) {
 	encoder := json.NewEncoder(body)
 	encoder.Encode(&master)
 
-	req := httptest.NewRequest("GET", "/", body)
+	req := httptest.NewRequest("GET", "/?index=0", body)
 	w := httptest.NewRecorder()
 
 	SaltServerRunRequestHandler(w, req)
@@ -155,7 +161,7 @@ func TestSaltServerStopRequestHandler(t *testing.T) {
 	os.Setenv(ENV_TYPE, "test")
 	defer os.Clearenv()
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest("GET", "/?index=0", nil)
 	w := httptest.NewRecorder()
 
 	SaltServerStopRequestHandler(w, req)

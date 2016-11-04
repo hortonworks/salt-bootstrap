@@ -23,6 +23,8 @@ type SignatureMethod int
 const (
 	SIGNED SignatureMethod = iota
 	OPEN
+	SIGNATURE      = "signature"
+	SIGNED_CONTENT = "signed"
 )
 
 type Authenticator struct {
@@ -65,8 +67,9 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 				defer r.Body.Close()
 				ioutil.ReadAll(io.TeeReader(r.Body, body))
 				r.Body = ioutil.NopCloser(body)
+				r.Header.Set(SIGNED_CONTENT, string(body.Bytes()))
 			}
-			signature := strings.TrimSpace(r.Header.Get("signature"))
+			signature := strings.TrimSpace(r.Header.Get(SIGNATURE))
 			if !CheckSignature(signature, a.SignatureKey, body.Bytes()) {
 				w.WriteHeader(http.StatusNotAcceptable)
 				w.Write([]byte("406 Not Acceptable"))
@@ -132,4 +135,8 @@ func GetAuthUserPass(r *http.Request) (string, string) {
 		return "", ""
 	}
 	return pair[0], pair[1]
+}
+
+func GetSignatureAndSigned(r *http.Request) (string, string) {
+	return strings.TrimSpace(r.Header.Get(SIGNATURE)), r.Header.Get(SIGNED_CONTENT)
 }
