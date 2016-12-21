@@ -2,15 +2,15 @@ package saltboot
 
 import (
 	"io/ioutil"
-	"strings"
 	"log"
+	"strings"
 )
 
 const DEFAULT_DOMAIN = ".example.com"
 const HOST_FILE_NAME = "/etc/hosts"
 
 func getIpv4Address() (string, error) {
-	return ExecCmd("hostname", "-i")
+	return ExecCmd("hostname -I | head -1")
 }
 
 func getFQDN() (string, error) {
@@ -26,7 +26,7 @@ func getDomain() (string, error) {
 }
 
 // This is required due to: https://github.com/saltstack/salt/issues/32719
-func ensureIpv6Resolvable(customDomain string) (error) {
+func ensureIpv6Resolvable(customDomain string) error {
 	hostname, hostNameErr := getHostName()
 	log.Printf("[ensureIpv6Resolvable] hostName: %s", hostname)
 	if hostNameErr != nil {
@@ -36,7 +36,7 @@ func ensureIpv6Resolvable(customDomain string) (error) {
 	domain, domainError := getDomain()
 	log.Printf("[ensureIpv6Resolvable] origin domain: %s", domain)
 	if customDomain == "" {
-		if domainError != nil  || domain == "" {
+		if domainError != nil || domain == "" {
 			domain = DEFAULT_DOMAIN
 		}
 	} else {
@@ -47,7 +47,7 @@ func ensureIpv6Resolvable(customDomain string) (error) {
 	return nil
 }
 
-func updateIpv6HostName(hostName string, domain string) (error) {
+func updateIpv6HostName(hostName string, domain string) error {
 	log.Printf("[updateIpv6HostName] hostName: %s, domain: %s", hostName, domain)
 	b, err := ioutil.ReadFile(HOST_FILE_NAME)
 	if err != nil {
@@ -72,4 +72,3 @@ func updateIpv6HostName(hostName string, domain string) (error) {
 
 	return nil
 }
-
