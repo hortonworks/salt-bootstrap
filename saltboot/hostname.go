@@ -10,7 +10,7 @@ const DEFAULT_DOMAIN = ".example.com"
 const HOST_FILE_NAME = "/etc/hosts"
 
 func getIpv4Address() (string, error) {
-	return ExecCmd("hostname -I | head -1")
+	return ExecCmd("hostname", "-I")
 }
 
 func getFQDN() (string, error) {
