@@ -13,31 +13,36 @@ func getIpv4Address() (string, error) {
 	return ExecCmd("hostname", "-i")
 }
 
-func getHostName() (string, error) {
+func getFQDN() (string, error) {
 	return ExecCmd("hostname", "-f")
 }
 
+func getHostName() (string, error) {
+	return ExecCmd("hostname", "-s")
+}
+
+func getDomain() (string, error) {
+	return ExecCmd("hostname", "-d")
+}
+
 // This is required due to: https://github.com/saltstack/salt/issues/32719
-func ensureIpv6Resolvable(domain string) error {
-	fqdn, err := getHostName()
-	log.Printf("[ensureIpv6Resolvable] fqdn: %s", fqdn)
-	if err != nil {
-		return err
+func ensureIpv6Resolvable(customDomain string) error {
+	hostname, hostNameErr := getHostName()
+	log.Printf("[ensureIpv6Resolvable] hostName: %s", hostname)
+	if hostNameErr != nil {
+		return hostNameErr
 	}
-	if !strings.Contains(fqdn, ".") {
-		// only fqdn does not contain domain
-		if domain != "" {
-			updateIpv6HostName(fqdn, domain)
-		} else {
-			//if there is no domain, we need to add one since ambari fails without domain, actually it does nothing just hangs..
-			updateIpv6HostName(fqdn, DEFAULT_DOMAIN)
+
+	domain, domainError := getDomain()
+	log.Printf("[ensureIpv6Resolvable] origin domain: %s", domain)
+	if customDomain == "" {
+		if domainError != nil || domain == "" {
+			domain = DEFAULT_DOMAIN
 		}
 	} else {
-		if domain != "" {
-			hostName := strings.Split(fqdn, ".")[0]
-			updateIpv6HostName(hostName, domain)
-		}
+		domain = customDomain
 	}
+	updateIpv6HostName(hostname, domain)
 
 	return nil
 }
