@@ -24,6 +24,10 @@ const (
 	HostnameDistributeEP   = RootPath + "/hostname/distribute"
 	HostnameEP             = RootPath + "/hostname"
 	UploadEP               = RootPath + "/file"
+	CaEP									 = RootPath + "/ca"
+	CsrEP									 = RootPath + "/csr"
+	KeyGenEP							 = RootPath + "/pkey"
+
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -34,6 +38,11 @@ func NewCloudbreakBootstrapWeb() {
 
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
+	r.HandleFunc(CaEP, CaHandler).Methods("GET")
+	r.HandleFunc(KeyGenEP, PrivateKeyHandler).Methods("GET")
+
+	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
+
 	r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, SIGNED)).Methods("POST")
 
