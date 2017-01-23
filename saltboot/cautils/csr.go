@@ -23,7 +23,7 @@ func NewCertificateRequest(key *Key) (*CertificateRequest, error) {
     //Attributes:
     //SignatureAlgorithm,
     //Extensions:
-    DNSNames: []string{},
+    DNSNames: []string{"localhost", "127.0.0.1"},
     //EmailAddress:
     //IPAddresses:
   }
@@ -58,6 +58,7 @@ func SignCsr(ca *CA, csr *CertificateRequest) (*Certificate, error) {
     KeyUsage: keyUsage,
     ExtKeyUsage: extKeyUsage,
     BasicConstraintsValid: true,
+    DNSNames: csr.Csr.DNSNames,
   }
   return CreateCertificate(template, ca.Certificate.Crt, csr.Csr.PublicKey, ca.Key.PrivateKey)
 }

@@ -37,7 +37,7 @@ func PrivateKeyHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func CsrGenHandler(w http.ResponseWriter, req *http.Request) {
-  log.Printf("[CAHandler] handlePrivateKey executed")
+  log.Printf("[CAHandler] handleCsrGen executed")
 	w.Header().Set("Content-Type", "application/json")
   if cautils.IsPathExisting("./tlsauth/client.key") == false {
     fmt.Fprintf(w, "FAIL")
