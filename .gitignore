@@ -17,5 +17,6 @@ saltboot.test
 *.a
 *.so
 
-
+tlsauth
+ca
 salt-bootstrap
