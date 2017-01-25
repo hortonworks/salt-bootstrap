@@ -3,6 +3,7 @@ package saltboot
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -42,19 +43,22 @@ func ensureIpv6Resolvable(customDomain string) error {
 	} else {
 		domain = customDomain
 	}
-	updateIpv6HostName(hostname, domain)
+	updateIpv6HostName(hostname, domain, HOST_FILE_NAME, getIpv4Address, ioutil.ReadFile, ioutil.WriteFile)
 
 	return nil
 }
 
-func updateIpv6HostName(hostName string, domain string) error {
+func updateIpv6HostName(hostName string, domain string, file string,
+	getIpv4Address func() (string, error),
+	readFile func(filename string) ([]byte, error),
+	writeFile func(filename string, data []byte, perm os.FileMode) error) error {
 	log.Printf("[updateIpv6HostName] hostName: %s, domain: %s", hostName, domain)
-	b, err := ioutil.ReadFile(HOST_FILE_NAME)
+	b, err := readFile(file)
 	if err != nil {
 		return err
 	}
-	hostfile := string(b)
-	log.Printf("[updateIpv6HostName] original hostfile: %s", hostfile)
+	hostsFile := string(b)
+	log.Printf("[updateIpv6HostName] original hosts file: %s", hostsFile)
 	address, err := getIpv4Address()
 	if err != nil {
 		return err
@@ -64,13 +68,19 @@ func updateIpv6HostName(hostName string, domain string) error {
 	}
 	ipv6hostString := address + " " + hostName + domain + " " + hostName
 	log.Printf("[updateIpv6HostName] ipv6hostString: %s", ipv6hostString)
-	if !strings.Contains(hostfile, address) {
-		hostfile = hostfile + "\n" + ipv6hostString
-		log.Printf("[updateIpv6HostName] updated hostfile: %s", hostfile)
-		err = ioutil.WriteFile(HOST_FILE_NAME, []byte(hostfile), 0644)
-		if err != nil {
-			return err
+
+	lines := strings.Split(hostsFile, "\n")
+	var filteredLines = make([]string, 0)
+	for _, line := range lines {
+		if !strings.Contains(line, address) {
+			filteredLines = append(filteredLines, line)
 		}
+	}
+	hostsFile = strings.Join(filteredLines, "\n") + "\n" + ipv6hostString
+	log.Printf("[updateIpv6HostName] updated hosts file: %s", hostsFile)
+	err = writeFile(file, []byte(hostsFile), 0644)
+	if err != nil {
+		return err
 	}
 
 	return nil
