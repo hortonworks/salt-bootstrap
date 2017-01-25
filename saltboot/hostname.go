@@ -59,6 +59,9 @@ func updateIpv6HostName(hostName string, domain string) error {
 	if err != nil {
 		return err
 	}
+	if !strings.HasPrefix(domain, ".") {
+		domain = "." + domain
+	}
 	ipv6hostString := address + " " + hostName + domain + " " + hostName
 	log.Printf("[updateIpv6HostName] ipv6hostString: %s", ipv6hostString)
 	if !strings.Contains(hostfile, address) {
