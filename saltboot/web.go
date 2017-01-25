@@ -24,12 +24,11 @@ const (
 	HostnameDistributeEP   = RootPath + "/hostname/distribute"
 	HostnameEP             = RootPath + "/hostname"
 	UploadEP               = RootPath + "/file"
-	CaEP									 = RootPath + "/ca"
-	CsrEP									 = RootPath + "/csr"
-	KeyGenEP							 = RootPath + "/pkey"
+	CaEP                   = RootPath + "/ca"
+	CsrEP                  = RootPath + "/csr"
+	KeyGenEP               = RootPath + "/pkey"
 	CsrGenEP               = RootPath + "/csrgen"
-	CsrSignEP               = RootPath + "/csrsign"
-
+	CsrSignEP              = RootPath + "/csrsign"
 )
 
 func NewCloudbreakBootstrapWeb() {
