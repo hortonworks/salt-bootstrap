@@ -4,7 +4,9 @@ import (
   "fmt"
   "log"
   "net/http"
+	"net/url"
   "os"
+	"io/ioutil"
 )
 
 
@@ -63,4 +65,31 @@ func CsrGenHandler(w http.ResponseWriter, req *http.Request) {
   }
   fmt.Fprintf(w, "OK")
 
+}
+
+func CsrSignHandler(w http.ResponseWriter, req * http.Request) {
+	log.Printf("[CAHandler] handleCsrSign executed")
+	w.Header().Set("Content-Type", "application/json")
+	if cautils.IsPathExisting("./tlsauth/client.csr") == false {
+    fmt.Fprintf(w, "FAIL")
+    return
+  }
+	csr, err := cautils.NewCertificateRequestFromPEMFile("./tlsauth/client.csr")
+	if err != nil {
+		 fmt.Fprintf(w, "FAIL")
+		 panic(err)
+	}
+	pem, _ := csr.ToPEM()
+	data := make(url.Values)
+  data.Add("csr", string(pem))
+  //resp, err := http.PostForm("http://" + host + "/certificates", data)
+	resp, _ := http.PostForm("http://127.0.0.1:7070/saltboot/csr", data)
+	crtBytes, _ := ioutil.ReadAll(resp.Body)
+	crt, err := cautils.NewCertificateFromPEM(crtBytes)
+	if err != nil {
+		 fmt.Fprintf(w, "FAIL")
+		 panic(err)
+	}
+	err = crt.ToPEMFile("./tlsauth/client.crt")
+	fmt.Fprintf(w, "OK")
 }

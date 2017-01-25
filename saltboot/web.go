@@ -28,6 +28,7 @@ const (
 	CsrEP									 = RootPath + "/csr"
 	KeyGenEP							 = RootPath + "/pkey"
 	CsrGenEP               = RootPath + "/csrgen"
+	CsrSignEP               = RootPath + "/csrsign"
 
 )
 
@@ -42,6 +43,7 @@ func NewCloudbreakBootstrapWeb() {
 	r.HandleFunc(CaEP, CaHandler).Methods("GET")
 	r.HandleFunc(KeyGenEP, PrivateKeyHandler).Methods("GET")
 	r.HandleFunc(CsrGenEP, CsrGenHandler).Methods("GET")
+	r.HandleFunc(CsrSignEP, CsrSignHandler).Methods("GET")
 
 	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
 
