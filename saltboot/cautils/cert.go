@@ -32,10 +32,10 @@ func NewCaCertificate(key *Key) (*Certificate, error) {
 	notBefore := time.Now()
 	notAfter := notBefore.Add(time.Hour * 365 * 24)
 	keyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign
-	extKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
+	extKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 	template := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               GenSubject("Hortonworks"),
+		Subject:               GenSubject("Hortonworks", ""),
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		KeyUsage:              keyUsage,
@@ -46,9 +46,13 @@ func NewCaCertificate(key *Key) (*Certificate, error) {
 	return CreateCertificate(template, template, key.PublicKey, key.PrivateKey)
 }
 
-func GenSubject(organization string) pkix.Name {
+func GenSubject(organization string, domains string) pkix.Name {
 	return pkix.Name{
 		Organization: []string{organization},
+    		CommonName: domains,
+		OrganizationalUnit: []string{"Cloudbreak"},
+		Country: []string{"US"},
+		Province: []string{"CA"},
 	}
 }
 func NewCertificateFromDER(derBytes []byte) (*Certificate, error) {

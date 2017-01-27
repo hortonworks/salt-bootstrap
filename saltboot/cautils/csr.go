@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"time"
+	"net"
 )
 
 type CertificateRequest struct {
@@ -16,13 +17,17 @@ type CertificateRequest struct {
 }
 
 func NewCertificateRequest(key *Key) (*CertificateRequest, error) {
+	ip, _, _ := net.ParseCIDR("127.0.0.1/24")
+	i2, _, _ := net.ParseCIDR("10.0.108.154/32")
+
 	template := &x509.CertificateRequest{
 		//Attributes:
 		//SignatureAlgorithm,
 		//Extensions:
-		DNSNames: []string{"localhost", "127.0.0.1"},
+    Subject: GenSubject("Hortonworks", "server.dc1.consul"),
+		DNSNames: []string{"localhost", "server.dc1.consul"},
 		//EmailAddress:
-		//IPAddresses:
+		IPAddresses: []net.IP{ip, i2},
 	}
 
 	derBytes, err := x509.CreateCertificateRequest(rand.Reader, template, key.PrivateKey)
@@ -55,6 +60,7 @@ func SignCsr(ca *CA, csr *CertificateRequest) (*Certificate, error) {
 		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: true,
 		DNSNames:              csr.Csr.DNSNames,
+                IPAddresses:           csr.Csr.IPAddresses,
 	}
 	return CreateCertificate(template, ca.Certificate.Crt, csr.Csr.PublicKey, ca.Key.PrivateKey)
 }
