@@ -10,9 +10,9 @@ import (
 	"os"
 )
 
-func PrivateKeyHandler(w http.ResponseWriter, req *http.Request) {
+func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	// mkdir if needed
-	log.Printf("[CAHandler] handlePrivateKey executed")
+	log.Printf("[CAHandler] handleClientCreds executed")
 	w.Header().Set("Content-Type", "application/json")
 
 	if cautils.IsPathExisting("./tlsauth") == false {
@@ -34,16 +34,6 @@ func PrivateKeyHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	}
-	fmt.Fprintf(w, "OK")
-}
-
-func CsrGenHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[CAHandler] handleCsrGen executed")
-	w.Header().Set("Content-Type", "application/json")
-	if cautils.IsPathExisting("./tlsauth/client.key") == false {
-		fmt.Fprintf(w, "FAIL")
-		return
-	}
 	if cautils.IsPathExisting("./tlsauth/client.csr") == false {
 		key, err := cautils.NewKeyFromPrivateKeyPEMFile("./tlsauth/client.key")
 		if err != nil {
@@ -61,17 +51,6 @@ func CsrGenHandler(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
 		}
-	}
-	fmt.Fprintf(w, "OK")
-
-}
-
-func CsrSignHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[CAHandler] handleCsrSign executed")
-	w.Header().Set("Content-Type", "application/json")
-	if cautils.IsPathExisting("./tlsauth/client.csr") == false {
-		fmt.Fprintf(w, "FAIL")
-		return
 	}
 	csr, err := cautils.NewCertificateRequestFromPEMFile("./tlsauth/client.csr")
 	if err != nil {

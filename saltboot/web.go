@@ -26,9 +26,7 @@ const (
 	UploadEP               = RootPath + "/file"
 	CaEP                   = RootPath + "/ca"
 	CsrEP                  = RootPath + "/csr"
-	KeyGenEP               = RootPath + "/pkey"
-	CsrGenEP               = RootPath + "/csrgen"
-	CsrSignEP              = RootPath + "/csrsign"
+	ClientCredsEP               = RootPath + "/clientcreds"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -40,9 +38,7 @@ func NewCloudbreakBootstrapWeb() {
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
 	r.HandleFunc(CaEP, CaHandler).Methods("GET")
-	r.HandleFunc(KeyGenEP, PrivateKeyHandler).Methods("GET")
-	r.HandleFunc(CsrGenEP, CsrGenHandler).Methods("GET")
-	r.HandleFunc(CsrSignEP, CsrSignHandler).Methods("GET")
+	r.HandleFunc(ClientCredsEP, ClientCredsHandler).Methods("GET")
 
 	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
 
