@@ -17,17 +17,22 @@ type CertificateRequest struct {
 }
 
 func NewCertificateRequest(key *Key) (*CertificateRequest, error) {
-	ip, _, _ := net.ParseCIDR("127.0.0.1/24")
-	i2, _, _ := net.ParseCIDR("10.0.108.154/32")
+	local, _, _ := net.ParseCIDR("127.0.0.1/24")
+
+	nodeIps := []net.IP{local}
+	addrs, err := net.InterfaceAddrs()
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				nodeIps =  append(nodeIps, ipnet.IP)
+			}
+		}
+	}
 
 	template := &x509.CertificateRequest{
-		//Attributes:
-		//SignatureAlgorithm,
-		//Extensions:
-    Subject: GenSubject("Hortonworks", "server.dc1.consul"),
+		Subject: GenSubject("Hortonworks", "server.dc1.consul"),
 		DNSNames: []string{"localhost", "server.dc1.consul"},
-		//EmailAddress:
-		IPAddresses: []net.IP{ip, i2},
+		IPAddresses: nodeIps,
 	}
 
 	derBytes, err := x509.CreateCertificateRequest(rand.Reader, template, key.PrivateKey)

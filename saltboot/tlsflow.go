@@ -21,6 +21,14 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	caResp, _ := http.Get("http://127.0.0.1:7070/saltboot/ca")
+	caBytes, _ := ioutil.ReadAll(caResp.Body)
+	caCrt, err := cautils.NewCertificateFromPEM(caBytes)
+	if err != nil {
+		fmt.Fprintf(w, "FAIL")
+		panic(err)
+	}
+	err = caCrt.ToPEMFile("./tlsauth/ca.crt")
 	if cautils.IsPathExisting("./tlsauth/client.key") == false {
 		key, err := cautils.NewKey()
 		if err != nil {
