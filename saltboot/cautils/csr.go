@@ -6,8 +6,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"time"
 	"net"
+	"time"
 )
 
 type CertificateRequest struct {
@@ -16,7 +16,7 @@ type CertificateRequest struct {
 	Csr *x509.CertificateRequest
 }
 
-func NewCertificateRequest(key *Key, pubIp string) (*CertificateRequest, error) {
+func NewCertificateRequest(key *Key, pubIp *string) (*CertificateRequest, error) {
 	local, _, _ := net.ParseCIDR("127.0.0.1/24")
 
 	nodeIps := []net.IP{local}
@@ -24,18 +24,18 @@ func NewCertificateRequest(key *Key, pubIp string) (*CertificateRequest, error) 
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				nodeIps =  append(nodeIps, ipnet.IP)
+				nodeIps = append(nodeIps, ipnet.IP)
 			}
 		}
 	}
-	if len(pubIp) != 0 {
-		public, _, _ := net.ParseCIDR(pubIp+"/24")
+	if pubIp != nil && len(*pubIp) != 0 {
+		public, _, _ := net.ParseCIDR(*pubIp + "/24")
 		nodeIps = append(nodeIps, public)
 	}
 
 	template := &x509.CertificateRequest{
-		Subject: GenSubject("Hortonworks", "server.dc1.consul"),
-		DNSNames: []string{"localhost", "server.dc1.consul"},
+		Subject:     GenSubject("Hortonworks", "server.dc1.consul"),
+		DNSNames:    []string{"localhost", "server.dc1.consul"},
 		IPAddresses: nodeIps,
 	}
 
@@ -69,7 +69,7 @@ func SignCsr(ca *CA, csr *CertificateRequest) (*Certificate, error) {
 		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: true,
 		DNSNames:              csr.Csr.DNSNames,
-                IPAddresses:           csr.Csr.IPAddresses,
+		IPAddresses:           csr.Csr.IPAddresses,
 	}
 	return CreateCertificate(template, ca.Certificate.Crt, csr.Csr.PublicKey, ca.Key.PrivateKey)
 }

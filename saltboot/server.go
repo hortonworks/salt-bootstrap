@@ -17,7 +17,7 @@ type Server struct {
 
 type Servers struct {
 	Servers []Server `json:"servers"`
-	Path    string   `  json:"path"`
+	Path    string   `json:"path"`
 }
 
 func (s *Servers) WriteToFile() (outStr string, err error) {

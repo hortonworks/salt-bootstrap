@@ -48,11 +48,11 @@ func NewCaCertificate(key *Key) (*Certificate, error) {
 
 func GenSubject(organization string, domains string) pkix.Name {
 	return pkix.Name{
-		Organization: []string{organization},
-    		CommonName: domains,
+		Organization:       []string{organization},
+		CommonName:         domains,
 		OrganizationalUnit: []string{"Cloudbreak"},
-		Country: []string{"US"},
-		Province: []string{"CA"},
+		Country:            []string{"US"},
+		Province:           []string{"CA"},
 	}
 }
 func NewCertificateFromDER(derBytes []byte) (*Certificate, error) {

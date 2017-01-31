@@ -9,24 +9,25 @@ import (
 )
 
 const (
-	RootPath               = "/saltboot"
-	HealthEP               = RootPath + "/health"
-	ServerSaveEP           = RootPath + "/server/save"
-	ServerDistributeEP     = RootPath + "/server/distribute"
-	SaltActionDistributeEP = RootPath + "/salt/action/distribute"
-	SaltMinionEp           = RootPath + "/salt/minion"
-	SaltServerEp           = RootPath + "/salt/server"
-	SaltMinionRunEP        = SaltMinionEp + "/run"
-	SaltMinionStopEP       = SaltMinionEp + "/stop"
-	SaltServerRunEP        = SaltServerEp + "/run"
-	SaltServerStopEP       = SaltServerEp + "/stop"
-	SaltPillarEP           = RootPath + "/salt/server/pillar"
-	HostnameDistributeEP   = RootPath + "/hostname/distribute"
-	HostnameEP             = RootPath + "/hostname"
-	UploadEP               = RootPath + "/file"
-	CaEP                   = RootPath + "/ca"
-	CsrEP                  = RootPath + "/csr"
-	ClientCredsEP               = RootPath + "/clientcreds"
+	RootPath                = "/saltboot"
+	HealthEP                = RootPath + "/health"
+	ServerSaveEP            = RootPath + "/server/save"
+	ServerDistributeEP      = RootPath + "/server/distribute"
+	SaltActionDistributeEP  = RootPath + "/salt/action/distribute"
+	SaltMinionEp            = RootPath + "/salt/minion"
+	SaltServerEp            = RootPath + "/salt/server"
+	SaltMinionRunEP         = SaltMinionEp + "/run"
+	SaltMinionStopEP        = SaltMinionEp + "/stop"
+	SaltServerRunEP         = SaltServerEp + "/run"
+	SaltServerStopEP        = SaltServerEp + "/stop"
+	SaltPillarEP            = RootPath + "/salt/server/pillar"
+	HostnameDistributeEP    = RootPath + "/hostname/distribute"
+	HostnameEP              = RootPath + "/hostname"
+	UploadEP                = RootPath + "/file"
+	CaEP                    = RootPath + "/ca"
+	CsrEP                   = RootPath + "/csr"
+	ClientCredsEP           = RootPath + "/clientcreds"
+	ClientCredsDistributeEP = ClientCredsEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -38,7 +39,8 @@ func NewCloudbreakBootstrapWeb() {
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
 	r.HandleFunc(CaEP, CaHandler).Methods("GET")
-	r.HandleFunc(ClientCredsEP, ClientCredsHandler).Methods("GET")
+	r.Handle(ClientCredsEP, authenticator.Wrap(ClientCredsHandler, SIGNED)).Methods("POST")
+	r.Handle(ClientCredsDistributeEP, authenticator.Wrap(ClientCredsDistributeHandler, SIGNED)).Methods("POST")
 
 	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
 
