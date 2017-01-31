@@ -33,8 +33,8 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pubIp := credentials.PublicIP
 
-	if cautils.IsPathExisting("./tlsauth") == false {
-		if err := os.Mkdir("./tlsauth", 0755); err != nil {
+	if cautils.IsPathExisting("/etc/certs") == false {
+		if err := os.Mkdir("/etc/certs", 0755); err != nil {
 			fmt.Fprintf(w, "FAIL")
 			return
 		}
@@ -46,22 +46,22 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "FAIL")
 		panic(err)
 	}
-	err = caCrt.ToPEMFile("./tlsauth/ca.crt")
-	if cautils.IsPathExisting("./tlsauth/client.key") == false {
+	err = caCrt.ToPEMFile("/etc/certs/ca.crt")
+	if cautils.IsPathExisting("/etc/certs/client.key") == false {
 		key, err := cautils.NewKey()
 		if err != nil {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
 		}
 
-		err = key.ToPEMFile("./tlsauth/client.key")
+		err = key.ToPEMFile("/etc/certs/client.key")
 		if err != nil {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
 		}
 	}
-	if cautils.IsPathExisting("./tlsauth/client.csr") == false {
-		key, err := cautils.NewKeyFromPrivateKeyPEMFile("./tlsauth/client.key")
+	if cautils.IsPathExisting("/etc/certs/client.csr") == false {
+		key, err := cautils.NewKeyFromPrivateKeyPEMFile("/etc/certs/client.key")
 		if err != nil {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
@@ -72,13 +72,13 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
 		}
-		err = csr.ToPEMFile("./tlsauth/client.csr")
+		err = csr.ToPEMFile("/etc/certs/client.csr")
 		if err != nil {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)
 		}
 	}
-	csr, err := cautils.NewCertificateRequestFromPEMFile("./tlsauth/client.csr")
+	csr, err := cautils.NewCertificateRequestFromPEMFile("/etc/certs/client.csr")
 	if err != nil {
 		fmt.Fprintf(w, "FAIL")
 		panic(err)
@@ -94,7 +94,7 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "FAIL")
 		panic(err)
 	}
-	err = crt.ToPEMFile("./tlsauth/client.crt")
+	err = crt.ToPEMFile("/etc/certs/client.crt")
 	fmt.Fprintf(w, "OK")
 }
 
