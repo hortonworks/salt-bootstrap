@@ -135,10 +135,15 @@ func (credentials *Credentials) DistributeClientCredentials(user string, pass st
 		PublicIP: credentials.PublicIP,
 	}
 	jsonBody, _ := json.Marshal(credReq)
-	distributeImpl(Distribute, []string{credentials.Servers[0].Address}, jsonBody, ClientCredsEP, user, pass)
+	resp := distributeImpl(Distribute, []string{credentials.Servers[0].Address}, jsonBody, ClientCredsEP, user, pass)
+	for _, r := range resp {
+		if r.StatusCode != http.StatusOK {
+			return resp
+		}
+	}
 
 	credReq.PublicIP = nil
 	jsonBody, _ = json.Marshal(credReq)
-	//TODO fix response
-	return distributeImpl(Distribute, credentials.Clients.Clients, jsonBody, ClientCredsEP, user, pass)
+
+	return append(resp, distributeImpl(Distribute, credentials.Clients.Clients, jsonBody, ClientCredsEP, user, pass)...)
 }
