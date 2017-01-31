@@ -14,6 +14,8 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	// mkdir if needed
 	log.Printf("[CAHandler] handleClientCreds executed")
 	w.Header().Set("Content-Type", "application/json")
+	pubIp := req.URL.Query().Get("pubip")
+
 
 	if cautils.IsPathExisting("./tlsauth") == false {
 		if err := os.Mkdir("./tlsauth", 0755); err != nil {
@@ -49,7 +51,7 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 
-		csr, err := cautils.NewCertificateRequest(key)
+		csr, err := cautils.NewCertificateRequest(key, pubIp)
 		if err != nil {
 			fmt.Fprintf(w, "FAIL")
 			panic(err)

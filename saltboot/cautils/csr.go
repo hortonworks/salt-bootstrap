@@ -16,7 +16,7 @@ type CertificateRequest struct {
 	Csr *x509.CertificateRequest
 }
 
-func NewCertificateRequest(key *Key) (*CertificateRequest, error) {
+func NewCertificateRequest(key *Key, pubIp string) (*CertificateRequest, error) {
 	local, _, _ := net.ParseCIDR("127.0.0.1/24")
 
 	nodeIps := []net.IP{local}
@@ -27,6 +27,10 @@ func NewCertificateRequest(key *Key) (*CertificateRequest, error) {
 				nodeIps =  append(nodeIps, ipnet.IP)
 			}
 		}
+	}
+	if len(pubIp) != 0 {
+		public, _, _ := net.ParseCIDR(pubIp+"/24")
+		nodeIps = append(nodeIps, public)
 	}
 
 	template := &x509.CertificateRequest{
