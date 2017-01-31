@@ -53,6 +53,12 @@ func (r Response) WriteBadRequestHttp(w http.ResponseWriter) (resp Response) {
 	return EncodeJson(r, w)
 }
 
+func (r Response) WriteInternalServerErrorHttp(w http.ResponseWriter) (resp Response) {
+	w.WriteHeader(http.StatusInternalServerError)
+	r.StatusCode = http.StatusInternalServerError
+	return EncodeJson(r, w)
+}
+
 func EncodeJson(r Response, w http.ResponseWriter) (resp Response) {
 	err := json.NewEncoder(w).Encode(r)
 	if err != nil {

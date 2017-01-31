@@ -2,7 +2,6 @@ package saltboot
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"io/ioutil"
@@ -35,7 +34,8 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 
 	if cautils.IsPathExisting("/etc/certs") == false {
 		if err := os.Mkdir("/etc/certs", 0755); err != nil {
-			fmt.Fprintf(w, "FAIL")
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 			return
 		}
 	}
@@ -43,45 +43,52 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	caBytes, _ := ioutil.ReadAll(caResp.Body)
 	caCrt, err := cautils.NewCertificateFromPEM(caBytes)
 	if err != nil {
-		fmt.Fprintf(w, "FAIL")
-		panic(err)
+		log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+		return
 	}
 	err = caCrt.ToPEMFile("/etc/certs/ca.crt")
 	if cautils.IsPathExisting("/etc/certs/client.key") == false {
 		key, err := cautils.NewKey()
 		if err != nil {
-			fmt.Fprintf(w, "FAIL")
-			panic(err)
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+			return
 		}
 
 		err = key.ToPEMFile("/etc/certs/client.key")
 		if err != nil {
-			fmt.Fprintf(w, "FAIL")
-			panic(err)
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+			return
 		}
 	}
 	if cautils.IsPathExisting("/etc/certs/client.csr") == false {
 		key, err := cautils.NewKeyFromPrivateKeyPEMFile("/etc/certs/client.key")
 		if err != nil {
-			fmt.Fprintf(w, "FAIL")
-			panic(err)
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+			return
 		}
 
 		csr, err := cautils.NewCertificateRequest(key, pubIp)
 		if err != nil {
-			fmt.Fprintf(w, "FAIL")
-			panic(err)
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+			return
 		}
 		err = csr.ToPEMFile("/etc/certs/client.csr")
 		if err != nil {
-			fmt.Fprintf(w, "FAIL")
-			panic(err)
+			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+			return
 		}
 	}
 	csr, err := cautils.NewCertificateRequestFromPEMFile("/etc/certs/client.csr")
 	if err != nil {
-		fmt.Fprintf(w, "FAIL")
-		panic(err)
+		log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+		return
 	}
 	pem, _ := csr.ToPEM()
 	data := make(url.Values)
@@ -91,11 +98,13 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	crtBytes, _ := ioutil.ReadAll(resp.Body)
 	crt, err := cautils.NewCertificateFromPEM(crtBytes)
 	if err != nil {
-		fmt.Fprintf(w, "FAIL")
-		panic(err)
+		log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
+		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
+		return
 	}
 	err = crt.ToPEMFile("/etc/certs/client.crt")
-	fmt.Fprintf(w, "OK")
+	model.Response{Status: "OK"}.WriteHttp(w)
+	return
 }
 
 func ClientCredsDistributeHandler(w http.ResponseWriter, req *http.Request) {
