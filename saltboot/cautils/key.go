@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
 )
 
 type Key struct {
@@ -18,6 +17,26 @@ type Key struct {
 	PublicKey  crypto.PublicKey
 	PrivateKey *rsa.PrivateKey
 	DerBytes   []byte
+}
+
+func keyFactoryByPEM(pemBytes []byte) (interface{}, error) {
+	pemBlock, _ := pem.Decode(pemBytes)
+	if pemBlock == nil {
+		return nil, errors.New("decode pem failed")
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newKey := Key{
+		PrivateKey: privateKey,
+		PublicKey:  privateKey.Public(),
+		DerBytes:   pemBlock.Bytes,
+	}
+
+	return newKey, nil
 }
 
 func NewKey() (*Key, error) {
@@ -39,52 +58,24 @@ func NewKey() (*Key, error) {
 
 	return newKey, nil
 }
+
 func NewKeyFromPrivateKeyPEM(pemBytes []byte) (*Key, error) {
 	// currently we only support rsa
-
-	pemBlock, _ := pem.Decode(pemBytes)
-	if pemBlock == nil {
-		return nil, errors.New("decode pem failed")
-	}
-
-	privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	newKey := &Key{
-		PrivateKey: privateKey,
-		PublicKey:  privateKey.Public(),
-		DerBytes:   pemBlock.Bytes,
-	}
-
-	return newKey, nil
+	rawKey, err := keyFactoryByPEM(pemBytes)
+	key := rawKey.(Key)
+	return &key, err
 }
+
 func NewKeyFromPrivateKeyPEMFile(filename string) (*Key, error) {
-
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewKeyFromPrivateKeyPEM(data)
-
+	rawKey, err := newFromPEMFile(filename, keyFactoryByPEM)
+	key := rawKey.(Key)
+	return &key, err
 }
+
 func (key *Key) ToPEM() ([]byte, error) {
-
-	pemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: key.DerBytes,
-	}
-	pemBytes := pem.EncodeToMemory(pemBlock)
-
-	return pemBytes, nil
+	return toPemImpl("RSA PRIVATE KEY", key.DerBytes)
 }
-func (key *Key) ToPEMFile(filename string) error {
-	pemBytes, err := key.ToPEM()
-	if err != nil {
-		return err
-	}
 
-	return ioutil.WriteFile(filename, pemBytes, 0400)
+func (key *Key) ToPEMFile(filename string) error {
+	return toPemFileImpl(key, filename)
 }

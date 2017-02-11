@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
 	"net"
 	"time"
 )
@@ -74,66 +73,51 @@ func SignCsr(ca *CA, csr *CertificateRequest) (*Certificate, error) {
 	return CreateCertificate(template, ca.Certificate.Crt, csr.Csr.PublicKey, ca.Key.PrivateKey)
 }
 
-func NewCertificateRequestFromDER(derBytes []byte) (*CertificateRequest, error) {
-
+func certificateRequestFactoryByDER(derBytes []byte) (CertificateRequest, error) {
 	csr, err := x509.ParseCertificateRequest(derBytes)
 	if err != nil {
-		return nil, err
+		return CertificateRequest{}, err
 	}
 
-	certificateRequest := &CertificateRequest{
+	certificateRequest := CertificateRequest{
 		DerBytes: derBytes,
 		Csr:      csr,
 	}
 
 	return certificateRequest, nil
 }
-func NewCertificateRequestFromPEM(pemBytes []byte) (*CertificateRequest, error) {
 
+func certificateRequestFactoryByPEM(pemBytes []byte) (interface{}, error) {
 	pemBlock, _ := pem.Decode(pemBytes)
 	if pemBlock == nil {
 		return nil, errors.New("PEM decode failed")
 	}
 
-	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	certificateRequest := &CertificateRequest{
-		DerBytes: pemBlock.Bytes,
-		Csr:      csr,
-	}
-
-	return certificateRequest, nil
+	csr, err := certificateRequestFactoryByDER(pemBlock.Bytes)
+	return csr, err
 }
+
+func NewCertificateRequestFromDER(derBytes []byte) (*CertificateRequest, error) {
+	csr, err := certificateRequestFactoryByDER(derBytes)
+	return &csr, err
+}
+
+func NewCertificateRequestFromPEM(pemBytes []byte) (*CertificateRequest, error) {
+	rawCsr, err := certificateRequestFactoryByPEM(pemBytes)
+	csr := rawCsr.(CertificateRequest)
+	return &csr, err
+}
+
 func NewCertificateRequestFromPEMFile(filename string) (*CertificateRequest, error) {
-
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewCertificateRequestFromPEM(data)
+	rawCsr, err := newFromPEMFile(filename, certificateRequestFactoryByPEM)
+	csr := rawCsr.(CertificateRequest)
+	return &csr, err
 }
 
 func (csr *CertificateRequest) ToPEM() ([]byte, error) {
-
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csr.DerBytes,
-	}
-
-	pemBytes := pem.EncodeToMemory(pemBlock)
-
-	return pemBytes, nil
+	return toPemImpl("CERTIFICATE REQUEST", csr.DerBytes)
 }
 
 func (csr *CertificateRequest) ToPEMFile(filename string) error {
-	pemBytes, err := csr.ToPEM()
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(filename, pemBytes, 0400)
+	return toPemFileImpl(csr, filename)
 }

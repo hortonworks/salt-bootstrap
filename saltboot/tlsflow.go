@@ -2,13 +2,14 @@ package saltboot
 
 import (
 	"encoding/json"
-	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 type Credentials struct {

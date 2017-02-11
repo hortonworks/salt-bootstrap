@@ -6,7 +6,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
 	"math/big"
 	"time"
 )
@@ -55,67 +54,54 @@ func GenSubject(organization string, domains string) pkix.Name {
 		Province:           []string{"CA"},
 	}
 }
-func NewCertificateFromDER(derBytes []byte) (*Certificate, error) {
 
+func certificateFactoryByDER(derBytes []byte) (Certificate, error) {
 	crt, err := x509.ParseCertificate(derBytes)
 	if err != nil {
-		return nil, err
+		return Certificate{}, err
 	}
 
-	cert := &Certificate{
+	cert := Certificate{
 		DerBytes: derBytes,
 		Crt:      crt,
 	}
 
 	return cert, nil
 }
-func NewCertificateFromPEM(pemBytes []byte) (*Certificate, error) {
 
+func certificateFactoryByPEM(pemBytes []byte) (interface{}, error) {
 	pemBlock, _ := pem.Decode(pemBytes)
 	if pemBlock == nil {
 		return nil, errors.New("PEM decode failed")
 	}
 
-	crt, err := x509.ParseCertificate(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	cert := &Certificate{
-		DerBytes: pemBlock.Bytes,
-		Crt:      crt,
-	}
-
-	return cert, nil
+	cert, err := certificateFactoryByDER(pemBlock.Bytes)
+	return cert, err
 }
+
+func NewCertificateFromDER(derBytes []byte) (*Certificate, error) {
+	cert, err := certificateFactoryByDER(derBytes)
+	return &cert, err
+}
+
+func NewCertificateFromPEM(pemBytes []byte) (*Certificate, error) {
+	rawCert, err := certificateFactoryByPEM(pemBytes)
+	cert := rawCert.(Certificate)
+	return &cert, err
+}
+
 func NewCertificateFromPEMFile(filename string) (*Certificate, error) {
-
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewCertificateFromPEM(data)
+	rawCert, err := newFromPEMFile(filename, certificateFactoryByPEM)
+	cert := rawCert.(Certificate)
+	return &cert, err
 }
 
 func (certificate *Certificate) ToPEM() ([]byte, error) {
-
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certificate.DerBytes,
-	}
-
-	pemBytes := pem.EncodeToMemory(pemBlock)
-
-	return pemBytes, nil
+	return toPemImpl("CERTIFICATE", certificate.DerBytes)
 }
-func (certificate *Certificate) ToPEMFile(filename string) error {
-	pemBytes, err := certificate.ToPEM()
-	if err != nil {
-		return err
-	}
 
-	return ioutil.WriteFile(filename, pemBytes, 0400)
+func (certificate *Certificate) ToPEMFile(filename string) error {
+	return toPemFileImpl(certificate, filename)
 }
 func (certificate *Certificate) GetSerialNumber() *big.Int {
 	return certificate.Crt.SerialNumber
