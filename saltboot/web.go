@@ -37,10 +37,10 @@ func NewCloudbreakBootstrapWeb() {
 	authenticator := Authenticator{}
 
 	r := mux.NewRouter()
-	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
-	r.HandleFunc(CaEP, CaHandler).Methods("GET")
-	r.Handle(ClientCredsEP, authenticator.Wrap(ClientCredsHandler, OPEN)).Methods("POST")
-	r.Handle(ClientCredsDistributeEP, authenticator.Wrap(ClientCredsDistributeHandler, OPEN)).Methods("POST")
+  r.Handle(HealthEP, RecoverWrap(http.HandlerFunc(HealthCheckHandler))).Methods("GET")
+  r.Handle(CaEP,  RecoverWrap(http.HandlerFunc(CaHandler))).Methods("GET")
+  r.Handle(ClientCredsEP, RecoverWrap(authenticator.Wrap(ClientCredsHandler, OPEN))).Methods("POST")
+  r.Handle(ClientCredsDistributeEP, RecoverWrap(authenticator.Wrap(ClientCredsDistributeHandler, SIGNED))).Methods("POST")
 
 	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
 

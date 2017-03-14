@@ -66,6 +66,10 @@ func NewCA(rootDir string) (*CA, error) {
 		ioutil.WriteFile(rootDir+"/ca/ca.srl", []byte("2"), 0644)
 	}
 
+	if IsPathExisting(rootDir+"/ca/ca.tkn") == false {
+		ioutil.WriteFile(rootDir+"/ca/ca.tkn", []byte(""), 0644)
+	}
+
 	newCA := &CA{
 		RootDir:     rootDir,
 		Certificate: certificate,
@@ -111,4 +115,9 @@ func (ca *CA) IssueCertificate(csr *CertificateRequest) (*Certificate, error) {
 	}
 
 	return cert, nil
+}
+
+
+func (ca *CA) IsSigningTokenValid(string) (bool) {
+	return false
 }
