@@ -6,6 +6,7 @@ import (
   "strconv"
   "strings"
   "errors"
+  "os"
 )
 var Now = time.Now
 
@@ -59,5 +60,58 @@ func DeserializeToken(serialized string) (*Token, error) {
 }
 
 func(t *Token) IsValid() bool {
-  return  t.ExpiresAt > Now().Unix()
+  return t.ExpiresAt > Now().Unix()
+}
+
+func(t *Token) Store(filename string) error {
+  f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+  if err != nil {
+    return err
+  }
+  _, err = f.WriteString(t.Serialize()+"\n")
+  if err != nil {
+    return err
+  }
+  f.Close()
+  return nil
+}
+
+func ValidateToken(filename string, token string,
+  readFile func(filename string) ([]byte, error),
+	writeFile func(filename string, data []byte, perm os.FileMode) error) (bool) {
+  b, err := readFile(filename)
+	if err != nil {
+		panic(err)
+	}
+  valid := false
+	loadedString := string(b)
+  loadedTokens := strings.Split(loadedString, "\n")
+  var filteredLines = make([]string, 0)
+
+  for _, serializedToken := range loadedTokens {
+      if serializedToken == "" {
+        continue;
+      }
+  		loadedToken, err := DeserializeToken(serializedToken)
+      if err != nil {
+        panic(err)
+      }
+      if loadedToken.IsValid() {
+        if loadedToken.RandomHash == token {
+          valid = true
+        } else {
+          filteredLines = append(filteredLines, serializedToken)
+        }
+      }
+  	}
+    tokensToKeep := strings.Join(filteredLines, "\n")
+    if len(tokensToKeep) > 0 {
+      tokensToKeep = tokensToKeep + "\n"
+    }
+    err = writeFile(filename, []byte(tokensToKeep), 0644)
+  	if err != nil {
+  		panic(err)
+  	}
+
+  return valid
 }

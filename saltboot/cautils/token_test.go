@@ -4,6 +4,9 @@ import (
 	"testing"
 	"sort"
 	"time"
+	"io/ioutil"
+	"os"
+	"strconv"
 )
 
 
@@ -80,5 +83,77 @@ func TestTokenIsValid(t *testing.T) {
 	tkn := NewToken(10, 1)
 	if (tkn.IsValid() != true) {
 		t.Errorf("Valid token detected as expired: %d, %d", Now().Unix(), tkn.ExpiresAt)
+	}
+}
+
+func TestTokenStore(t *testing.T) {
+	ioutil.WriteFile("../testdata/ca.tkn", []byte(""), 0644)
+	tkn1, _ := DeserializeToken("tkn1:123")
+	tkn1.Store("../testdata/ca.tkn")
+	tkn2, _ := DeserializeToken("tkn2:1515151123")
+	tkn2.Store("../testdata/ca.tkn")
+	result, _ := ioutil.ReadFile("../testdata/ca.tkn")
+	expected := "tkn1:123\ntkn2:1515151123\n"
+	if string(result) != expected {
+  	t.Errorf("Persist token failed %s != %s ", string(result), expected)
+	}
+}
+
+
+
+func TestTokenValidatorRemovesExpiredTokens(t *testing.T) {
+
+	readFile := func(filename string) ([]byte, error) {
+		hostsFile :="tkn1:123\ntkn2:1515151123\n"
+		return []byte(hostsFile), nil
+	}
+
+	var result string
+	writeFile := func(filename string, data []byte, perm os.FileMode) error {
+		result = string(data)
+		return nil
+	}
+
+	valid := ValidateToken("/not/used/in/tests", "tktk", readFile, writeFile)
+
+	expected := ""
+
+	if expected != result {
+		t.Errorf("Token store content does not match desired state, %s != %s", expected, result)
+	}
+
+	if valid != false {
+		t.Errorf("True returned for valid, when token is not found.")
+	}
+}
+
+
+
+func TestTokenValidatorAcceptsValidTokens(t *testing.T) {
+	time1 := Now().Unix() + 30
+	time2 := time1 + 10
+
+	readFile := func(filename string) ([]byte, error) {
+		hostsFile := "tkn1:" + strconv.FormatInt(time1,
+			 10) + "\ntkn2:" + strconv.FormatInt(time2, 10) + "\n"
+		return []byte(hostsFile), nil
+	}
+
+	var result string
+	writeFile := func(filename string, data []byte, perm os.FileMode) error {
+		result = string(data)
+		return nil
+	}
+
+	valid := ValidateToken("/not/used/in/tests", "tkn2", readFile, writeFile)
+
+	expected := "tkn1:" +  strconv.FormatInt(time1, 10)+ "\n"
+
+	if expected != result {
+		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
+	}
+
+	if valid != true {
+		t.Errorf("False returned for found, when no token is valid and found.")
 	}
 }

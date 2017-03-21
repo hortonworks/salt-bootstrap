@@ -109,6 +109,9 @@ func (ca *CA) IncreaseSerialNumber() error {
 }
 func (ca *CA) IssueCertificate(csr *CertificateRequest) (*Certificate, error) {
 	cert, err := SignCsr(ca, csr)
+	if err != nil {
+		panic(err)
+	}
 	// increase sn
 	if err = ca.IncreaseSerialNumber(); err != nil {
 		return nil, err
