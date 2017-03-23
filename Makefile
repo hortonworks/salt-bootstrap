@@ -14,7 +14,7 @@ clean:
 	rm -rf build
 
 all: build
-	
+
 format:
 	@gofmt -w ${GOFILES}
 
@@ -23,6 +23,7 @@ vet:
 
 test:
 	go test github.com/hortonworks/salt-bootstrap/saltboot
+	go test github.com/hortonworks/salt-bootstrap/saltboot/cautils
 
 build: format vet test build-darwin build-linux
 
