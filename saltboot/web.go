@@ -25,7 +25,8 @@ const (
 	HostnameEP              = RootPath + "/hostname"
 	UploadEP                = RootPath + "/file"
 	CaEP                    = RootPath + "/ca"
-	CsrEP                   = RootPath + "/csr"
+	CsrCBEP                   = RootPath + "/csr/cloudbreak"
+	CsrEP                   = RootPath + "/csr/client"
 	ClientCredsEP           = RootPath + "/clientcreds"
 	ClientCredsDistributeEP = ClientCredsEP + "/distribute"
 )
@@ -42,7 +43,8 @@ func NewCloudbreakBootstrapWeb() {
   r.Handle(ClientCredsEP, RecoverWrap(authenticator.Wrap(ClientCredsHandler, OPEN))).Methods("POST")
   r.Handle(ClientCredsDistributeEP, RecoverWrap(authenticator.Wrap(ClientCredsDistributeHandler, SIGNED))).Methods("POST")
 
-	r.HandleFunc(CsrEP, CsrHandler).Methods("POST")
+	r.Handle(CsrCBEP, RecoverWrap(authenticator.Wrap(CsrHandler, SIGNED))).Methods("POST")
+	r.Handle(CsrEP, RecoverWrap(authenticator.Wrap(CsrHandler, TOKEN))).Methods("POST")
 
 	r.Handle(ServerSaveEP, authenticator.Wrap(ServerRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, SIGNED)).Methods("POST")

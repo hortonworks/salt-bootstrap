@@ -14,14 +14,15 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
 	"fmt"
+	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
 )
 
 type SignatureMethod int
 
 const (
 	SIGNED SignatureMethod = iota
+  TOKEN  SignatureMethod = iota
 	OPEN
 	SIGNATURE      = "signature"
 	SIGNED_CONTENT = "signed"
@@ -35,7 +36,7 @@ type Authenticator struct {
 
 func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request), signatureMethod SignatureMethod) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0 {
+		if ( a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0 )&& signatureMethod != TOKEN {
 			log.Printf("[Authenticator] missing Username, Password or SignatureKey we are going to load it")
 			securityConfig, err := DetermineSecurityDetails(os.Getenv, defaultSecurityConfigLoc)
 			if err != nil {
@@ -51,7 +52,7 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 			a.SignatureKey = []byte(securityConfig.SignVerifyKey)
 		}
 
-		valid := CheckAuth(a.Username, a.Password, r)
+		valid := CheckAuth(a.Username, a.Password, r, signatureMethod)
 		if !valid {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("401 Unauthorized"))
@@ -82,13 +83,20 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 	})
 }
 
-func CheckAuth(user string, pass string, r *http.Request) bool {
-	hUser, hPassword := GetAuthUserPass(r)
-	result := user == hUser && pass == hPassword
+func CheckAuth(user string, pass string, r *http.Request, signatureMethod SignatureMethod) bool {
+	result := false
+	if signatureMethod == TOKEN {
+		authToken := GetAuthToken(r)
+    result = cautils.ValidateToken("/etc/salt-bootstrap/ca/ca.tkn", authToken, ioutil.ReadFile, ioutil.WriteFile)
+	} else {
+		hUser, hPassword := GetAuthUserPass(r)
+		result = user == hUser && pass == hPassword
+	}
 	if !result {
 		log.Printf("[auth] invalid autorization header: %s from %s", r.Header.Get("Authorization"), r.Host)
 	}
 	return result
+
 }
 
 func CheckSignature(rawSign string, pubPem []byte, data []byte) bool {
@@ -135,6 +143,15 @@ func GetAuthUserPass(r *http.Request) (string, string) {
 		return "", ""
 	}
 	return pair[0], pair[1]
+}
+
+func GetAuthToken(r *http.Request) (string) {
+	s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+	if len(s) != 2 || s[0] != "Token" {
+		log.Printf("[auth] Missing Token authorization header")
+		return ""
+	}
+	return s[1]
 }
 
 func GetSignatureAndSigned(r *http.Request) (string, string) {

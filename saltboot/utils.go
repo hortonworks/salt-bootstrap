@@ -5,6 +5,7 @@ import (
   "errors"
   "net/http"
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
+  "log"
 )
 
 
@@ -22,6 +23,7 @@ func RecoverWrap(h http.Handler) http.Handler {
                 default:
                     err = errors.New("Unknown error")
                 }
+                log.Printf("ERROR:" + err.Error())
                 model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
             }
         }()
