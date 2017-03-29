@@ -14,7 +14,7 @@ import (
 )
 
 func TestDistributeActionImplWithoutMaster(t *testing.T) {
-	distributeRequest := func(clients []string, request SaltActionRequest, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
+	distributeRequest := func(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -42,7 +42,7 @@ func TestDistributeActionImplWithoutMaster(t *testing.T) {
 }
 
 func TestDistributeActionImplMaster(t *testing.T) {
-	distributeRequest := func(clients []string, request SaltActionRequest, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
+	distributeRequest := func(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}

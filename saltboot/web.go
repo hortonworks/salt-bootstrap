@@ -24,6 +24,7 @@ const (
 	HostnameDistributeEP   = RootPath + "/hostname/distribute"
 	HostnameEP             = RootPath + "/hostname"
 	UploadEP               = RootPath + "/file"
+	FileDistributeEP       = UploadEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -48,6 +49,7 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler, OPEN)).Methods("POST")
 
 	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, SIGNED)).Methods("POST")
+	r.Handle(FileDistributeEP, authenticator.Wrap(FileUploadDistributeHandler, SIGNED)).Methods("POST")
 
 	log.Printf("[web] starting server at: %s", address)
 	http.Handle("/", r)

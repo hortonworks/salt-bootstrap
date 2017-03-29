@@ -39,7 +39,7 @@ func (r Response) String() string {
 	return fmt.Sprintf("Response: %s", string(j))
 }
 
-func (r Response) WriteHttp(w http.ResponseWriter) (resp Response) {
+func (r Response) WriteHttp(w http.ResponseWriter) Response {
 	if r.StatusCode == 0 {
 		r.StatusCode = 200
 	}
@@ -47,13 +47,13 @@ func (r Response) WriteHttp(w http.ResponseWriter) (resp Response) {
 	return EncodeJson(r, w)
 }
 
-func (r Response) WriteBadRequestHttp(w http.ResponseWriter) (resp Response) {
+func (r Response) WriteBadRequestHttp(w http.ResponseWriter) Response {
 	w.WriteHeader(http.StatusBadRequest)
 	r.StatusCode = http.StatusBadRequest
 	return EncodeJson(r, w)
 }
 
-func EncodeJson(r Response, w http.ResponseWriter) (resp Response) {
+func EncodeJson(r Response, w http.ResponseWriter) Response {
 	err := json.NewEncoder(w).Encode(r)
 	if err != nil {
 		log.Printf("[writehttp] failed to create json from model: %s", err.Error())
