@@ -64,24 +64,24 @@ func (r SaltActionRequest) String() string {
 	return fmt.Sprintf(string(b))
 }
 
-func (r SaltActionRequest) distributeAction(user string, pass string, signature string, signed string) (result []model.Response) {
+func (r SaltActionRequest) distributeAction(user string, pass string, signature string, signed string) []model.Response {
 	log.Print("[distributeAction] distribute salt state command to targets")
 	return distributeActionImpl(DistributeActionRequest, r, user, pass, signature, signed)
 }
 
-func distributeActionImpl(distributeActionRequest func([]string, SaltActionRequest, string, string, string, string, string) <-chan model.Response, r SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
+func distributeActionImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response, r SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
 	var targets []string
 	for _, minion := range r.Minions {
 		targets = append(targets, minion.Address)
 	}
 
 	action := strings.ToLower(r.Action)
-	for res := range distributeActionRequest(targets, r, SaltMinionEp+"/"+action, user, pass, signature, signed) {
+	for res := range distributeActionRequest(targets, SaltMinionEp+"/"+action, user, pass, signature, signed) {
 		result = append(result, res)
 	}
 
 	if len(r.Master.Address) > 0 {
-		result = append(result, <-distributeActionRequest([]string{r.Master.Address}, r, SaltServerEp+"/"+action, user, pass, signature, signed))
+		result = append(result, <-distributeActionRequest([]string{r.Master.Address}, SaltServerEp+"/"+action, user, pass, signature, signed))
 	}
 	return result
 }
