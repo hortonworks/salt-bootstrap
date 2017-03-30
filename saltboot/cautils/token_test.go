@@ -88,7 +88,7 @@ func TestTokenIsValid(t *testing.T) {
 
 func TestTokenStore(t *testing.T) {
 	ioutil.WriteFile("../testdata/ca.tkn", []byte(""), 0644)
-	os.Remove("../testdata/test_tokens/*")
+	defer os.Remove("../testdata/test_tokens/*")
 	tkn1, _ := DeserializeToken("tkn1:123")
 	Store("../testdata/test_tokens/" + tkn1.RandomHash, tkn1)
 

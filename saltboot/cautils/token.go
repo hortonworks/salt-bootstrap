@@ -68,8 +68,8 @@ func Store(filename string, content interface{Serialize() string}) error {
   if err != nil {
     return err
   }
+  defer f.Close()
   _, err = f.WriteString(content.Serialize())
-  f.Close()
   if err != nil {
     return err
   }
