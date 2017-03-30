@@ -63,16 +63,16 @@ func(t *Token) IsValid() bool {
   return t.ExpiresAt > Now().Unix()
 }
 
-func(t *Token) Store(filename string) error {
-  f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+func Store(filename string, content interface{Serialize() string}) error {
+  f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0644)
   if err != nil {
     return err
   }
-  _, err = f.WriteString(t.Serialize()+"\n")
-  if err != nil {
-    return err
-  }
+  _, err = f.WriteString(content.Serialize())
   f.Close()
+  if err != nil {
+    return err
+  }
   return nil
 }
 

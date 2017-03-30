@@ -88,14 +88,23 @@ func TestTokenIsValid(t *testing.T) {
 
 func TestTokenStore(t *testing.T) {
 	ioutil.WriteFile("../testdata/ca.tkn", []byte(""), 0644)
+	os.Remove("../testdata/test_tokens/*")
 	tkn1, _ := DeserializeToken("tkn1:123")
-	tkn1.Store("../testdata/ca.tkn")
+	Store("../testdata/test_tokens/" + tkn1.RandomHash, tkn1)
+
 	tkn2, _ := DeserializeToken("tkn2:1515151123")
-	tkn2.Store("../testdata/ca.tkn")
-	result, _ := ioutil.ReadFile("../testdata/ca.tkn")
-	expected := "tkn1:123\ntkn2:1515151123\n"
+	Store("../testdata/test_tokens/" + tkn2.RandomHash, tkn2)
+
+	result, _ := ioutil.ReadFile("../testdata/test_tokens/tkn1")
+	expected := "tkn1:123\n"
 	if string(result) != expected {
   	t.Errorf("Persist token failed %s != %s ", string(result), expected)
+	}
+
+	result, _ = ioutil.ReadFile("../testdata/test_tokens/tkn2")
+	expected = "tkn2:1515151123\n"
+	if string(result) != expected {
+  	t.Errorf("Persist token failed %s != %s ", result, expected)
 	}
 }
 

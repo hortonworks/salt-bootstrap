@@ -20,4 +20,4 @@ saltboot.test
 tlsauth
 ca
 salt-bootstrap
-saltboot/testdata/ca.tkn
+saltboot/testdata/test_tokens/
