@@ -16,7 +16,7 @@ import (
 	"mime/multipart"
 )
 
-func DistributeActionRequest(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
+func DistributeRequest(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
 	var wg sync.WaitGroup
 	wg.Add(len(clients))
 	c := make(chan model.Response, len(clients))

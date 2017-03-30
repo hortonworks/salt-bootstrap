@@ -40,8 +40,9 @@ type SaltMinion struct {
 }
 
 type SaltPillar struct {
-	Path string                 `json:"path"`
-	Json map[string]interface{} `json:"json"`
+	Path    string                 `json:"path"`
+	Json    map[string]interface{} `json:"json"`
+	Targets []string               `json:"targets"`
 }
 
 func (saltMinion SaltMinion) AsByteArray() []byte {
@@ -66,28 +67,29 @@ func (r SaltActionRequest) String() string {
 
 func (r SaltActionRequest) distributeAction(user string, pass string, signature string, signed string) []model.Response {
 	log.Print("[distributeAction] distribute salt state command to targets")
-	return distributeActionImpl(DistributeActionRequest, r, user, pass, signature, signed)
+	return distributeActionImpl(DistributeRequest, r, user, pass, signature, signed)
 }
 
-func distributeActionImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response, r SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
+func distributeActionImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response,
+	request SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
 	var targets []string
-	for _, minion := range r.Minions {
+	for _, minion := range request.Minions {
 		targets = append(targets, minion.Address)
 	}
 
-	action := strings.ToLower(r.Action)
+	action := strings.ToLower(request.Action)
 	for res := range distributeActionRequest(targets, SaltMinionEp+"/"+action, user, pass, signature, signed) {
 		result = append(result, res)
 	}
 
-	if len(r.Master.Address) > 0 {
-		result = append(result, <-distributeActionRequest([]string{r.Master.Address}, SaltServerEp+"/"+action, user, pass, signature, signed))
+	if len(request.Master.Address) > 0 {
+		result = append(result, <-distributeActionRequest([]string{request.Master.Address}, SaltServerEp+"/"+action, user, pass, signature, signed))
 	}
 	return result
 }
 
 func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
+	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
 
 	var resp model.Response
 
@@ -153,20 +155,20 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("[SaltMinionRunRequestHandler] execute salt-minion run request")
+	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
 	resp, _ = LaunchService("salt-minion")
 	resp.WriteHttp(w)
 }
 
 func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltMinionStopRequestHandler] execute salt-minion stop request")
+	log.Println("[SaltMinionStopRequestHandler] execute salt-minion stop request")
 
 	resp, _ := StopService("salt-minion")
 	resp.WriteHttp(w)
 }
 
 func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltServerRunRequestHandler] execute salt run request")
+	log.Println("[SaltServerRunRequestHandler] execute salt run request")
 
 	decoder := json.NewDecoder(req.Body)
 	var saltActionRequest SaltActionRequest
@@ -215,7 +217,7 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltServerStopRequestHandler] execute salt master stop request")
+	log.Println("[SaltServerStopRequestHandler] execute salt master stop request")
 	resp, err := StopService("salt-master")
 	resp.WriteHttp(w)
 	if err != nil {
@@ -248,7 +250,7 @@ func writePillarImpl(pillar SaltPillar, basePath string) (outStr string, err err
 }
 
 func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltPillarRequestHandler] execute salt pillar save request")
+	log.Println("[SaltPillarRequestHandler] execute salt pillar save request")
 	decoder := json.NewDecoder(req.Body)
 	var saltPillar SaltPillar
 	err := decoder.Decode(&saltPillar)
@@ -285,7 +287,7 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[SaltActionDistributeRequestHandler] execute Salt state distribute request")
+	log.Println("[SaltActionDistributeRequestHandler] execute Salt state distribute request")
 
 	decoder := json.NewDecoder(req.Body)
 	var saltActionRequest SaltActionRequest
@@ -302,4 +304,35 @@ func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltActionDistributeRequestHandler] distribute salt state command request executed: %s", cResp.String())
 	json.NewEncoder(w).Encode(cResp)
+}
+
+func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("[SaltPillarDistributeRequestHandler] execute Salt pillar distribute request")
+
+	decoder := json.NewDecoder(req.Body)
+	var saltPillar SaltPillar
+	err := decoder.Decode(&saltPillar)
+	if err != nil {
+		log.Printf("[SaltPillarDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
+		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		return
+	}
+
+	user, pass := GetAuthUserPass(req)
+	signature, signed := GetSignatureAndSigned(req)
+
+	log.Printf("[SaltPillarDistributeRequestHandler] send pillar save request to nodes: %s", saltPillar.Targets)
+	result := distributePillarImpl(DistributeRequest, saltPillar, user, pass, signature, signed)
+
+	cResp := model.Responses{Responses: result}
+	log.Printf("[SaltPillarDistributeRequestHandler] distribute salt pillar request executed: %s", cResp.String())
+	json.NewEncoder(w).Encode(cResp)
+}
+
+func distributePillarImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response,
+	request SaltPillar, user string, pass string, signature string, signed string) (result []model.Response) {
+	for res := range distributeActionRequest(request.Targets, SaltPillarEP, user, pass, signature, signed) {
+		result = append(result, res)
+	}
+	return result
 }

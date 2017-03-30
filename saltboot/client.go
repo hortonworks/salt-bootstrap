@@ -16,8 +16,8 @@ type Clients struct {
 
 func (clients *Clients) DistributeAddress(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeAddress] Request: %s", clients)
-	json, _ := json.Marshal(Servers{Servers: clients.Servers, Path: clients.Path})
-	return distributeImpl(Distribute, clients.Clients, json, ServerSaveEP, user, pass)
+	jsonString, _ := json.Marshal(Servers{Servers: clients.Servers, Path: clients.Path})
+	return distributeImpl(Distribute, clients.Clients, jsonString, ServerSaveEP, user, pass)
 }
 
 func distributeImpl(distribute func(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response, c []string, json []byte, endpoint string, user string, pass string) (result []model.Response) {
@@ -34,10 +34,10 @@ func (clients *Clients) DistributeHostnameRequest(user string, pass string) (res
 }
 
 func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[ClientHostnameHandler] get FQDN")
+	log.Println("[ClientHostnameHandler] get FQDN")
 	fqdn, err := getFQDN()
 	if err != nil {
-		log.Printf("[ClientHostnameHandler] failed to retrieve FQDN")
+		log.Println("[ClientHostnameHandler] failed to retrieve FQDN")
 		model.Response{Status: err.Error(), StatusCode: http.StatusInternalServerError}.WriteHttp(w)
 		return
 	}
@@ -46,7 +46,7 @@ func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func ClientHostnameDistributionHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[ClientHostnameRequestHandler] execute distribute hostname request")
+	log.Println("[ClientHostnameRequestHandler] execute distribute hostname request")
 
 	decoder := json.NewDecoder(req.Body)
 	var clients Clients
@@ -65,7 +65,7 @@ func ClientHostnameDistributionHandler(w http.ResponseWriter, req *http.Request)
 }
 
 func ClientDistributionHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("[clientDistributionHandler] execute distribute request")
+	log.Println("[clientDistributionHandler] execute distribute request")
 
 	decoder := json.NewDecoder(req.Body)
 	var clients Clients

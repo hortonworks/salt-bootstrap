@@ -21,6 +21,7 @@ const (
 	SaltServerRunEP        = SaltServerEp + "/run"
 	SaltServerStopEP       = SaltServerEp + "/stop"
 	SaltPillarEP           = RootPath + "/salt/server/pillar"
+	SaltPillarDistributeEP = SaltPillarEP + "/distribute"
 	HostnameDistributeEP   = RootPath + "/hostname/distribute"
 	HostnameEP             = RootPath + "/hostname"
 	UploadEP               = RootPath + "/file"
@@ -44,6 +45,7 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltPillarDistributeEP, authenticator.Wrap(SaltPillarDistributeRequestHandler, SIGNED)).Methods("POST")
 
 	r.Handle(HostnameDistributeEP, authenticator.Wrap(ClientHostnameDistributionHandler, SIGNED)).Methods("POST")
 	r.Handle(HostnameEP, authenticator.Wrap(ClientHostnameHandler, OPEN)).Methods("POST")
