@@ -21,11 +21,12 @@ func IsPathExisting(path string) bool {
 	return true
 }
 
-func NewCA(rootDir string) (*CA, error) {
+func NewCA() (*CA, error) {
 
+	rootDir := DetermineCaRootDir(os.Getenv)
 	// mkdir if needed
-	if IsPathExisting(rootDir+"/ca") == false {
-		if err := os.MkdirAll(rootDir+"/ca", 0755); err != nil {
+	if IsPathExisting(rootDir) == false {
+		if err := os.MkdirAll(rootDir, 0755); err != nil {
 			return nil, err
 		}
 	}
@@ -33,13 +34,13 @@ func NewCA(rootDir string) (*CA, error) {
 	var key *Key
 	var certificate *Certificate
 	var err error
-	if IsPathExisting(rootDir+"/ca/ca.key") == false {
+	if IsPathExisting(rootDir+"/ca.key") == false {
 		// gen priv key
 		key, err = NewKey()
 		if err != nil {
 			return nil, err
 		}
-		if err := key.ToPEMFile(rootDir + "/ca/ca.key"); err != nil {
+		if err := key.ToPEMFile(rootDir + "/ca.key"); err != nil {
 			return nil, err
 		}
 
@@ -47,27 +48,29 @@ func NewCA(rootDir string) (*CA, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := certificate.ToPEMFile(rootDir + "/ca/ca.crt"); err != nil {
+		if err := certificate.ToPEMFile(rootDir + "/ca.crt"); err != nil {
 			return nil, err
 		}
 
 	} else {
-		certificate, err = NewCertificateFromPEMFile(rootDir + "/ca/ca.crt")
+		certificate, err = NewCertificateFromPEMFile(rootDir + "/ca.crt")
 		if err != nil {
 			return nil, err
 		}
-		key, err = NewKeyFromPrivateKeyPEMFile(rootDir + "/ca/ca.key")
+		key, err = NewKeyFromPrivateKeyPEMFile(rootDir + "/ca.key")
 		if err != nil {
 			return nil, err
 		}
 
 	}
-	if IsPathExisting(rootDir+"/ca/ca.srl") == false {
-		ioutil.WriteFile(rootDir+"/ca/ca.srl", []byte("2"), 0644)
+	if IsPathExisting(rootDir+"/ca.srl") == false {
+		ioutil.WriteFile(rootDir+"/ca.srl", []byte("2"), 0644)
 	}
 
-	if IsPathExisting(rootDir+"/ca/ca.tkn") == false {
-		ioutil.WriteFile(rootDir+"/ca/ca.tkn", []byte(""), 0644)
+	if IsPathExisting(rootDir+"/tokens") == false {
+		if err := os.MkdirAll(rootDir+"/tokens", 0755); err != nil {
+			return nil, err
+		}
 	}
 
 	newCA := &CA{

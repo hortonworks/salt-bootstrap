@@ -8,7 +8,7 @@ import (
 )
 
 func CaHandler(w http.ResponseWriter, req *http.Request) {
-	ca, err := cautils.NewCA("/etc/salt-bootstrap")
+	ca, err := cautils.NewCA()
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,7 @@ func CsrHandler(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	newCA, err := cautils.NewCA("/etc/salt-bootstrap")
+	newCA, err := cautils.NewCA()
 	if err != nil {
 		panic(err)
 	}

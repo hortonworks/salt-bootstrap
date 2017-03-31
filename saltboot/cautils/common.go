@@ -3,6 +3,13 @@ package cautils
 import (
 	"encoding/pem"
 	"io/ioutil"
+	"os"
+	"log"
+)
+
+const (
+  caLocKey         = "SALTBOOT_CA"
+	defaultCaLoc     = "./ca"
 )
 
 type ToPem interface {
@@ -35,4 +42,14 @@ func toPemFileImpl(source ToPem, filename string) error {
 	}
 
 	return ioutil.WriteFile(filename, pemBytes, 0400)
+}
+
+
+func DetermineCaRootDir(getEnv func(key string) string) string {
+	caLocation := os.Getenv(caLocKey)
+	log.Printf("[determineCaRootDir] CA_ROOT_DIR: %s", caLocation)
+	if len(caLocation) == 0 {
+		caLocation = defaultCaLoc
+	}
+	return caLocation
 }
