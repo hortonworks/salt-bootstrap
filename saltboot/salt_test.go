@@ -94,8 +94,10 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	}
 
 	content, _ := ioutil.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
-	expected := "master: server"
-	if string(content) != expected {
+	var masters map[string][]string
+	yaml.Unmarshal(content, &masters)
+	expected := map[string][]string{"master": []string{"server"}}
+	if masters["master"][0] != expected["master"][0] {
 		t.Errorf("master config not match %s == %s", expected, string(content))
 	}
 

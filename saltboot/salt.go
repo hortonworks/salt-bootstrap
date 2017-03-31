@@ -17,6 +17,7 @@ import (
 
 type SaltActionRequest struct {
 	Master  SaltMaster   `json:"master,omitempty"`
+	Masters []SaltMaster `json:"masters,omitempty"`
 	Minions []SaltMinion `json:"minions,omitempty"`
 	Action  string       `json:"action"`
 }
@@ -35,6 +36,7 @@ type SaltMinion struct {
 	Address   string   `json:"address"`
 	Roles     []string `json:"roles,omitempty"`
 	Server    string   `json:"server,omitempty"`
+	Servers   []string `json:"servers,omitempty"`
 	HostGroup string   `json:"hostGroup,omitempty"`
 	Domain    string   `json:"domain,omitempty"`
 }
@@ -78,11 +80,22 @@ func distributeActionImpl(distributeActionRequest func([]string, string, string,
 	}
 
 	action := strings.ToLower(request.Action)
+	log.Printf("[distributeActionImpl] send action request to minions: %s", targets)
 	for res := range distributeActionRequest(targets, SaltMinionEp+"/"+action, user, pass, signature, signed) {
 		result = append(result, res)
 	}
 
-	if len(request.Master.Address) > 0 {
+	if request.Masters != nil && len(request.Masters) > 0 {
+		var masters []string
+		for _, master := range request.Masters {
+			masters = append(masters, master.Address)
+		}
+		log.Printf("[distributeActionImpl] send action request to masters: %s", masters)
+		for res := range distributeActionRequest(masters, SaltServerEp+"/"+action, user, pass, signature, signed) {
+			result = append(result, res)
+		}
+	} else if len(request.Master.Address) > 0 {
+		log.Printf("[distributeActionImpl] send action request to master: %s", request.Master.Address)
 		result = append(result, <-distributeActionRequest([]string{request.Master.Address}, SaltServerEp+"/"+action, user, pass, signature, signed))
 	}
 	return result
@@ -140,7 +153,15 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	masterConf := []byte("master: " + saltMinion.Server)
+	var masterConf []byte
+	servers := saltMinion.Servers
+	if servers != nil && len(servers) > 0 {
+		log.Printf("[SaltMinionRunRequestHandler] multiple salt masters: %s", servers)
+		masterConf, _ = yaml.Marshal(map[string][]string{"master": servers})
+	} else {
+		log.Printf("[SaltMinionRunRequestHandler] single salt master: %s", saltMinion.Server)
+		masterConf, _ = yaml.Marshal(map[string][]string{"master": []string{saltMinion.Server}})
+	}
 	err = ioutil.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
@@ -179,7 +200,21 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	saltMaster := saltActionRequest.Master
+	index, err := strconv.Atoi(req.URL.Query().Get("index"))
+	if err != nil {
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err)
+		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		return
+	}
+
+	var saltMaster SaltMaster
+	masters := saltActionRequest.Masters
+	if masters != nil && len(masters) > 0 {
+		saltMaster = masters[index]
+	} else {
+		saltMaster = saltActionRequest.Master
+	}
+
 	ensureIpv6Resolvable(saltMaster.Domain)
 	if err != nil {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err)
