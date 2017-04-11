@@ -153,7 +153,7 @@ func TestTokenValidatorRemovesExpiredTokens(t *testing.T) {
 		}
 		return nil, errors.New("Bad filename requested :" + filename)
 	}
-	Remove := func(filename string) error {
+	removeFile := func(filename string) error {
 		var tmp = []os.FileInfo{}
 		for _, file := range files {
 			if filename != filepath.Join("mock", file.Name()) {
@@ -164,7 +164,7 @@ func TestTokenValidatorRemovesExpiredTokens(t *testing.T) {
 		return nil
 	}
 
-	valid := ValidateToken("mock", "tkn1", readDir, readFile, Remove)
+	valid := ValidateToken("mock", "tkn1", readDir, readFile, removeFile)
 	if valid {
 		t.Errorf("Invalid token detected as valid token %b != %b ", valid, false)
 
@@ -196,7 +196,7 @@ func TestTokenValidatorAcceptsValidTokens(t *testing.T) {
 		}
 		return nil, errors.New("Bad filename requested :" + filename)
 	}
-	Remove := func(filename string) error {
+	removeFile := func(filename string) error {
 		var tmp = []os.FileInfo{}
 		for _, file := range files {
 			if filename != filepath.Join("mock", file.Name()) {
@@ -207,7 +207,7 @@ func TestTokenValidatorAcceptsValidTokens(t *testing.T) {
 		return nil
 	}
 
-	valid := ValidateToken("mock", "tkn3", readDir, readFile, Remove)
+	valid := ValidateToken("mock", "tkn3", readDir, readFile, removeFile)
 	if !valid {
 		t.Errorf("Valid token detected as invalid token %s != %s ", valid, true)
 

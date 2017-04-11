@@ -82,7 +82,7 @@ func Store(filename string, content interface {
 func ValidateToken(dirname string, token string,
 	readDir func(dirname string) ([]os.FileInfo, error),
 	readFile func(filename string) ([]byte, error),
-	Remove func(name string) error) bool {
+	removeFile func(name string) error) bool {
 	valid := false
 	files, err := readDir(dirname)
 	if err != nil {
@@ -101,7 +101,7 @@ func ValidateToken(dirname string, token string,
 			valid = loadedToken.RandomHash == token && loadedToken.IsValid()
 		}
 		if loadedToken.RandomHash == token || !loadedToken.IsValid() {
-			Remove(filepath.Join(dirname, file.Name()))
+			removeFile(filepath.Join(dirname, file.Name()))
 		}
 
 	}
