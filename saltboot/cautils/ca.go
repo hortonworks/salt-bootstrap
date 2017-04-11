@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -34,13 +35,13 @@ func NewCA() (*CA, error) {
 	var key *Key
 	var certificate *Certificate
 	var err error
-	if IsPathExisting(rootDir+"/ca.key") == false {
+	if IsPathExisting(filepath.Join(rootDir, "ca.key")) == false {
 		// gen priv key
 		key, err = NewKey()
 		if err != nil {
 			return nil, err
 		}
-		if err := key.ToPEMFile(rootDir + "/ca.key"); err != nil {
+		if err := key.ToPEMFile(filepath.Join(rootDir, "ca.key")); err != nil {
 			return nil, err
 		}
 
@@ -48,27 +49,27 @@ func NewCA() (*CA, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := certificate.ToPEMFile(rootDir + "/ca.crt"); err != nil {
+		if err := certificate.ToPEMFile(filepath.Join(rootDir, "ca.crt")); err != nil {
 			return nil, err
 		}
 
 	} else {
-		certificate, err = NewCertificateFromPEMFile(rootDir + "/ca.crt")
+		certificate, err = NewCertificateFromPEMFile(filepath.Join(rootDir, "ca.crt"))
 		if err != nil {
 			return nil, err
 		}
-		key, err = NewKeyFromPrivateKeyPEMFile(rootDir + "/ca.key")
+		key, err = NewKeyFromPrivateKeyPEMFile(filepath.Join(rootDir, "ca.key"))
 		if err != nil {
 			return nil, err
 		}
 
 	}
-	if IsPathExisting(rootDir+"/ca.srl") == false {
-		ioutil.WriteFile(rootDir+"/ca.srl", []byte("2"), 0644)
+	if IsPathExisting(filepath.Join(rootDir, "ca.srl")) == false {
+		ioutil.WriteFile(filepath.Join(rootDir, "ca.srl"), []byte("2"), 0644)
 	}
 
-	if IsPathExisting(rootDir+"/tokens") == false {
-		if err := os.MkdirAll(rootDir+"/tokens", 0755); err != nil {
+	if IsPathExisting(filepath.Join(rootDir, "tokens")) == false {
+		if err := os.MkdirAll(filepath.Join(rootDir, "tokens"), 0755); err != nil {
 			return nil, err
 		}
 	}
@@ -83,7 +84,7 @@ func NewCA() (*CA, error) {
 }
 
 func (ca *CA) GetSerialNumber() (*big.Int, error) {
-	snStr, err := ioutil.ReadFile(ca.RootDir + "/ca/ca.srl")
+	snStr, err := ioutil.ReadFile(filepath.Join(ca.RootDir, "ca.srl"))
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +97,7 @@ func (ca *CA) GetSerialNumber() (*big.Int, error) {
 	return sn, nil
 }
 func (ca *CA) IncreaseSerialNumber() error {
-	snStr, err := ioutil.ReadFile(ca.RootDir + "/ca/ca.srl")
+	snStr, err := ioutil.ReadFile(filepath.Join(ca.RootDir, "ca.srl"))
 	if err != nil {
 		panic(err)
 	}
@@ -106,10 +107,11 @@ func (ca *CA) IncreaseSerialNumber() error {
 	}
 	nextSnInt := snInt + 1
 	nextSnStr := strconv.Itoa(nextSnInt) + "\n"
-	ioutil.WriteFile(ca.RootDir+"/ca/ca.srl", []byte(nextSnStr), 0600)
+	ioutil.WriteFile(filepath.Join(ca.RootDir, "ca.srl"), []byte(nextSnStr), 0600)
 
 	return nil
 }
+
 func (ca *CA) IssueCertificate(csr *CertificateRequest) (*Certificate, error) {
 	cert, err := SignCsr(ca, csr)
 	if err != nil {
@@ -123,7 +125,6 @@ func (ca *CA) IssueCertificate(csr *CertificateRequest) (*Certificate, error) {
 	return cert, nil
 }
 
-
-func (ca *CA) IsSigningTokenValid(string) (bool) {
+func (ca *CA) IsSigningTokenValid(string) bool {
 	return false
 }

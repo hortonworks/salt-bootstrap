@@ -8,13 +8,15 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
-	"fmt"
+
 	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
 )
 
@@ -22,7 +24,7 @@ type SignatureMethod int
 
 const (
 	SIGNED SignatureMethod = iota
-  TOKEN  SignatureMethod = iota
+	TOKEN  SignatureMethod = iota
 	OPEN
 	SIGNATURE      = "signature"
 	SIGNED_CONTENT = "signed"
@@ -36,7 +38,7 @@ type Authenticator struct {
 
 func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Request), signatureMethod SignatureMethod) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ( a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0 )&& signatureMethod != TOKEN {
+		if (a.Username == "" || a.Password == "" || len(a.SignatureKey) == 0) && signatureMethod != TOKEN {
 			log.Printf("[Authenticator] missing Username, Password or SignatureKey we are going to load it")
 			securityConfig, err := DetermineSecurityDetails(os.Getenv, defaultSecurityConfigLoc)
 			if err != nil {
@@ -87,7 +89,8 @@ func CheckAuth(user string, pass string, r *http.Request, signatureMethod Signat
 	result := false
 	if signatureMethod == TOKEN {
 		authToken := GetAuthToken(r)
-    result = cautils.ValidateToken("/etc/salt-bootstrap/ca/ca.tkn", authToken, ioutil.ReadFile, ioutil.WriteFile)
+		result = cautils.ValidateToken(filepath.Join(
+			cautils.DetermineCaRootDir(os.Getenv), "tokens"), authToken, ioutil.ReadDir, ioutil.ReadFile, os.Remove)
 	} else {
 		hUser, hPassword := GetAuthUserPass(r)
 		result = user == hUser && pass == hPassword
@@ -145,7 +148,7 @@ func GetAuthUserPass(r *http.Request) (string, string) {
 	return pair[0], pair[1]
 }
 
-func GetAuthToken(r *http.Request) (string) {
+func GetAuthToken(r *http.Request) string {
 	s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 	if len(s) != 2 || s[0] != "Token" {
 		log.Printf("[auth] Missing Token authorization header")
