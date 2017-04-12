@@ -20,4 +20,5 @@ saltboot.test
 tlsauth
 ca
 salt-bootstrap
+crt
 saltboot/testdata/test_tokens/

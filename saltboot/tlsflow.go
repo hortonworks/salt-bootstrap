@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
@@ -33,8 +34,8 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pubIp := credentials.PublicIP
 
-	if cautils.IsPathExisting("/etc/certs") == false {
-		if err := os.Mkdir("/etc/certs", 0755); err != nil {
+	if cautils.IsPathExisting(cautils.DetermineCrtDir(os.Getenv)) == false {
+		if err := os.Mkdir(cautils.DetermineCrtDir(os.Getenv), 0755); err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
 			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 			return
@@ -48,8 +49,8 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 		return
 	}
-	err = caCrt.ToPEMFile("/etc/certs/ca.crt")
-	if cautils.IsPathExisting("/etc/certs/client.key") == false {
+	err = caCrt.ToPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "ca.crt"))
+	if cautils.IsPathExisting(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.key")) == false {
 		key, err := cautils.NewKey()
 		if err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
@@ -57,15 +58,15 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = key.ToPEMFile("/etc/certs/client.key")
+		err = key.ToPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.key"))
 		if err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
 			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 			return
 		}
 	}
-	if cautils.IsPathExisting("/etc/certs/client.csr") == false {
-		key, err := cautils.NewKeyFromPrivateKeyPEMFile("/etc/certs/client.key")
+	if cautils.IsPathExisting(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.csr")) == false {
+		key, err := cautils.NewKeyFromPrivateKeyPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.key"))
 		if err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
 			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
@@ -78,14 +79,14 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 			return
 		}
-		err = csr.ToPEMFile("/etc/certs/client.csr")
+		err = csr.ToPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.csr"))
 		if err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
 			model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 			return
 		}
 	}
-	csr, err := cautils.NewCertificateRequestFromPEMFile("/etc/certs/client.csr")
+	csr, err := cautils.NewCertificateRequestFromPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.csr"))
 	if err != nil {
 		log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
@@ -103,7 +104,7 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 		model.Response{Status: err.Error()}.WriteInternalServerErrorHttp(w)
 		return
 	}
-	err = crt.ToPEMFile("/etc/certs/client.crt")
+	err = crt.ToPEMFile(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "client.crt"))
 	model.Response{Status: "OK"}.WriteHttp(w)
 	return
 }
