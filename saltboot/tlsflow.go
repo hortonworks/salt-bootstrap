@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/cautils"
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
@@ -15,7 +16,8 @@ import (
 
 type Credentials struct {
 	Clients
-	PublicIP *string `json:"PublicIP" yaml:"PublicIP"`
+	PublicIP  *string `json:"PublicIP" yaml:"PublicIP"`
+	AuthToken *string `json:"AuthToken" yaml:"AuthToken"`
 }
 
 func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
@@ -33,7 +35,7 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("[CAHandler] handleClientCreds executed")
 	w.Header().Set("Content-Type", "application/json")
 	pubIp := credentials.PublicIP
-
+	authToken := credentials.AuthToken
 	if cautils.IsPathExisting(cautils.DetermineCrtDir(os.Getenv)) == false {
 		if err := os.Mkdir(cautils.DetermineCrtDir(os.Getenv), 0755); err != nil {
 			log.Printf("[ClientCredsHandler] [ERROR]: %s", err.Error())
@@ -96,7 +98,10 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	data := make(url.Values)
 	data.Add("csr", string(pem))
 	//resp, err := http.PostForm("http://" + host + "/certificates", data)
-	resp, _ := http.PostForm("http://"+credentials.Servers[0].Address+":7070/saltboot/csr", data)
+	httpreq, err := http.NewRequest("POST", "http://"+credentials.Servers[0].Address+":7070/saltboot/csr/client", strings.NewReader(data.Encode()))
+	httpreq.Header.Add("Authorization", "Token "+*authToken)
+	httpreq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, _ := http.DefaultClient.Do(httpreq)
 	crtBytes, _ := ioutil.ReadAll(resp.Body)
 	crt, err := cautils.NewCertificateFromPEM(crtBytes)
 	if err != nil {
