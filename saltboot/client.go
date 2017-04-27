@@ -28,6 +28,13 @@ func distributeImpl(distribute func(clients []string, payload []byte, endpoint s
 	return result
 }
 
+func distributeImplSlice(distribute func(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response, c []string, json [][]byte, endpoint string, user string, pass string) (result []model.Response) {
+	for _, pl := range json {
+		result = append(result, <-distribute(c, pl, endpoint, user, pass))
+	}
+	return result
+}
+
 func (clients *Clients) DistributeHostnameRequest(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeHostnameRequest] Request: %s", clients)
 	return distributeImpl(Distribute, clients.Clients, nil, HostnameEP, user, pass)

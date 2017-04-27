@@ -97,7 +97,6 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	pem, _ := csr.ToPEM()
 	data := make(url.Values)
 	data.Add("csr", string(pem))
-	//resp, err := http.PostForm("http://" + host + "/certificates", data)
 	httpreq, err := http.NewRequest("POST", "http://"+credentials.Servers[0].Address+":7070/saltboot/csr/client", strings.NewReader(data.Encode()))
 	httpreq.Header.Add("Authorization", "Token "+*authToken)
 	httpreq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -135,22 +134,33 @@ func ClientCredsDistributeHandler(w http.ResponseWriter, req *http.Request) {
 
 func (credentials *Credentials) DistributeClientCredentials(user string, pass string) []model.Response {
 	log.Printf("[Clients.DistributeClientCredentials] Request: %v", credentials)
-	credReq := Credentials{
-		Clients: Clients{
-			Servers: credentials.Servers,
-		},
-		PublicIP: credentials.PublicIP,
+	credReqs := make([][]byte, 0)
+	var pubIP *string
+	for idx, _ := range credentials.Servers {
+		if idx == 0 {
+			pubIP = credentials.PublicIP
+		} else {
+			pubIP = nil
+		}
+		tmpToken := cautils.NewToken(10, 10)
+		cautils.Store(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "tokens", tmpToken.RandomHash), tmpToken)
+		credReq := Credentials{
+			Clients: Clients{
+				Servers: credentials.Servers,
+			},
+			PublicIP:  pubIP,
+			AuthToken: &tmpToken.RandomHash,
+		}
+		jsonBody, _ := json.Marshal(credReq)
+		credReqs = append(credReqs, jsonBody)
 	}
-	jsonBody, _ := json.Marshal(credReq)
-	resp := distributeImpl(Distribute, []string{credentials.Servers[0].Address}, jsonBody, ClientCredsEP, user, pass)
+
+	resp := distributeImpl(Distribute, []string{credentials.Servers[0].Address}, credReqs[0], ClientCredsEP, user, pass)
 	for _, r := range resp {
 		if r.StatusCode != http.StatusOK {
 			return resp
 		}
 	}
 
-	credReq.PublicIP = nil
-	jsonBody, _ = json.Marshal(credReq)
-
-	return append(resp, distributeImpl(Distribute, credentials.Clients.Clients, jsonBody, ClientCredsEP, user, pass)...)
+	return append(resp, distributeImplSlice(Distribute, credentials.Clients.Clients, credReqs, ClientCredsEP, user, pass)...)
 }
