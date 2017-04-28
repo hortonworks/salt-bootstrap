@@ -135,12 +135,10 @@ func ClientCredsDistributeHandler(w http.ResponseWriter, req *http.Request) {
 func (credentials *Credentials) DistributeClientCredentials(user string, pass string) []model.Response {
 	log.Printf("[Clients.DistributeClientCredentials] Request: %v", credentials)
 	credReqs := make([][]byte, 0)
-	var pubIP *string
 	for idx, _ := range credentials.Servers {
+		var pubIP *string
 		if idx == 0 {
 			pubIP = credentials.PublicIP
-		} else {
-			pubIP = nil
 		}
 		tmpToken := cautils.NewToken(10, 10)
 		cautils.Store(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "tokens", tmpToken.RandomHash), tmpToken)
