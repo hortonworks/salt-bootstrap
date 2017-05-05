@@ -155,13 +155,17 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	var masterConf []byte
 	servers := saltMinion.Servers
+	restartNeeded := false
 	if servers != nil && len(servers) > 0 {
-		log.Printf("[SaltMinionRunRequestHandler] multiple salt masters: %s", servers)
+		log.Printf("[SaltMinionRunRequestHandler] salt master list: %s", servers)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": servers})
+		restartNeeded = isSaltMinionRestartNeeded(servers)
 	} else {
-		log.Printf("[SaltMinionRunRequestHandler] single salt master: %s", saltMinion.Server)
+		log.Printf("[SaltMinionRunRequestHandler] salt master (depricated): %s", saltMinion.Server)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": []string{saltMinion.Server}})
+		restartNeeded = isSaltMinionRestartNeeded([]string{saltMinion.Server})
 	}
+
 	err = ioutil.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
@@ -177,8 +181,13 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
-	resp, _ = LaunchService("salt-minion")
-	resp.WriteHttp(w)
+	if restartNeeded {
+		resp, _ = RestartService("salt-minion")
+		resp.WriteHttp(w)
+	} else {
+		resp, _ = LaunchService("salt-minion")
+		resp.WriteHttp(w)
+	}
 }
 
 func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
@@ -370,4 +379,33 @@ func distributePillarImpl(distributeActionRequest func([]string, string, string,
 		result = append(result, res)
 	}
 	return result
+}
+
+func isSaltMinionRestartNeeded(servers []string) bool {
+	log.Println("[isSaltMinionRestartNeeded] check whether salt-minion requires restart")
+	masterConfFile := "/etc/salt/minion.d/master.conf"
+	b, err := ioutil.ReadFile(masterConfFile)
+	if err == nil && len(b) > 0 {
+		var saltMasterIps map[string][]string = make(map[string][]string)
+		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
+			log.Printf("[isSaltMinionRestartNeeded] failed to unmarshal salt master config file: %s", err.Error())
+			return false
+		}
+		ipList := saltMasterIps["master"]
+		log.Printf("[isSaltMinionRestartNeeded] original master IP list: %s", ipList)
+		for _, server := range servers {
+			newMaster := true
+			for _, ip := range ipList {
+				if ip == server {
+					newMaster = false
+				}
+			}
+			if newMaster {
+				log.Printf("[isSaltMinionRestartNeeded] found new salt-master: %s, restart needed", server)
+				return true
+			}
+		}
+	}
+	log.Println("[isSaltMinionRestartNeeded] there is no new salt-master")
+	return false
 }
