@@ -16,8 +16,8 @@ import (
 
 type Credentials struct {
 	Clients
-	PublicIP  *string `json:"PublicIP" yaml:"PublicIP"`
-	AuthToken *string `json:"AuthToken" yaml:"AuthToken"`
+	PublicIPs []*string `json:"PublicIP" yaml:"PublicIP"`
+	AuthToken *string   `json:"AuthToken" yaml:"AuthToken"`
 }
 
 func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
@@ -34,7 +34,10 @@ func ClientCredsHandler(w http.ResponseWriter, req *http.Request) {
 	// mkdir if needed
 	log.Printf("[CAHandler] handleClientCreds executed")
 	w.Header().Set("Content-Type", "application/json")
-	pubIp := credentials.PublicIP
+	var pubIp *string
+	if len(credentials.PublicIPs) > 0 {
+		pubIp = credentials.PublicIPs[0]
+	}
 	authToken := credentials.AuthToken
 	if cautils.IsPathExisting(cautils.DetermineCrtDir(os.Getenv)) == false {
 		if err := os.Mkdir(cautils.DetermineCrtDir(os.Getenv), 0755); err != nil {
@@ -134,31 +137,58 @@ func ClientCredsDistributeHandler(w http.ResponseWriter, req *http.Request) {
 
 func (credentials *Credentials) DistributeClientCredentials(user string, pass string) []model.Response {
 	log.Printf("[Clients.DistributeClientCredentials] Request: %v", credentials)
-	credReqs := make([][]byte, 0)
-	for idx, _ := range credentials.Servers {
+	servers := make([]string, 0)
+	clientcredReqs := make([][]byte, 0)
+	servercredReqs := make([][]byte, 0)
+	for idx, srv := range credentials.Servers {
 		var pubIP *string
-		if idx == 0 {
-			pubIP = credentials.PublicIP
+		if len(credentials.PublicIPs) > idx+1 {
+			pubIP = credentials.PublicIPs[idx]
 		}
 		tmpToken := cautils.NewToken(10, 10)
-		cautils.Store(filepath.Join(cautils.DetermineCrtDir(os.Getenv), "tokens", tmpToken.RandomHash), tmpToken)
+		err := cautils.Store(filepath.Join(cautils.DetermineCaRootDir(os.Getenv), "tokens", tmpToken.RandomHash), tmpToken)
+		if err != nil {
+			log.Printf(err.Error())
+		}
 		credReq := Credentials{
 			Clients: Clients{
 				Servers: credentials.Servers,
 			},
-			PublicIP:  pubIP,
+			PublicIPs: []*string{pubIP},
 			AuthToken: &tmpToken.RandomHash,
 		}
 		jsonBody, _ := json.Marshal(credReq)
-		credReqs = append(credReqs, jsonBody)
+		servercredReqs = append(servercredReqs, jsonBody)
+		servers = append(servers, srv.Address)
+
 	}
 
-	resp := distributeImpl(Distribute, []string{credentials.Servers[0].Address}, credReqs[0], ClientCredsEP, user, pass)
+	for _, clientip := range credentials.Clients.Clients {
+		if cautils.StringInSlice(clientip, servers) {
+			continue
+		}
+		tmpToken := cautils.NewToken(10, 10)
+		err := cautils.Store(filepath.Join(cautils.DetermineCaRootDir(os.Getenv), "tokens", tmpToken.RandomHash), tmpToken)
+		if err != nil {
+			log.Printf(err.Error())
+		}
+		credReq := Credentials{
+			Clients: Clients{
+				Servers: credentials.Servers,
+			},
+			PublicIPs: nil,
+			AuthToken: &tmpToken.RandomHash,
+		}
+		jsonBody, _ := json.Marshal(credReq)
+		clientcredReqs = append(clientcredReqs, jsonBody)
+	}
+
+	resp := distributeImplSlice(Distribute, servers, servercredReqs, ClientCredsEP, user, pass)
 	for _, r := range resp {
 		if r.StatusCode != http.StatusOK {
 			return resp
 		}
 	}
 
-	return append(resp, distributeImplSlice(Distribute, credentials.Clients.Clients, credReqs, ClientCredsEP, user, pass)...)
+	return append(resp, distributeImplSlice(Distribute, credentials.Clients.Clients, clientcredReqs, ClientCredsEP, user, pass)...)
 }

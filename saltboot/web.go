@@ -25,7 +25,7 @@ const (
 	HostnameEP              = RootPath + "/hostname"
 	UploadEP                = RootPath + "/file"
 	CaEP                    = RootPath + "/ca"
-	CsrCBEP                   = RootPath + "/csr/cloudbreak"
+	CsrCBEP                 = RootPath + "/csr/cloudbreak"
 	CsrEP                   = RootPath + "/csr/client"
 	ClientCredsEP           = RootPath + "/clientcreds"
 	ClientCredsDistributeEP = ClientCredsEP + "/distribute"
@@ -38,10 +38,10 @@ func NewCloudbreakBootstrapWeb() {
 	authenticator := Authenticator{}
 
 	r := mux.NewRouter()
-  r.Handle(HealthEP, RecoverWrap(http.HandlerFunc(HealthCheckHandler))).Methods("GET")
-  r.Handle(CaEP,  RecoverWrap(http.HandlerFunc(CaHandler))).Methods("GET")
-  r.Handle(ClientCredsEP, RecoverWrap(authenticator.Wrap(ClientCredsHandler, OPEN))).Methods("POST")
-  r.Handle(ClientCredsDistributeEP, RecoverWrap(authenticator.Wrap(ClientCredsDistributeHandler, SIGNED))).Methods("POST")
+	r.Handle(HealthEP, RecoverWrap(http.HandlerFunc(HealthCheckHandler))).Methods("GET")
+	r.Handle(CaEP, RecoverWrap(http.HandlerFunc(CaHandler))).Methods("GET")
+	r.Handle(ClientCredsEP, RecoverWrap(authenticator.Wrap(ClientCredsHandler, OPEN))).Methods("POST")
+	r.Handle(ClientCredsDistributeEP, RecoverWrap(authenticator.Wrap(ClientCredsDistributeHandler, TOKEN))).Methods("POST")
 
 	r.Handle(CsrCBEP, RecoverWrap(authenticator.Wrap(CsrHandler, SIGNED))).Methods("POST")
 	r.Handle(CsrEP, RecoverWrap(authenticator.Wrap(CsrHandler, TOKEN))).Methods("POST")

@@ -4,6 +4,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"log"
+	"sort"
 )
 
 const (
@@ -64,4 +65,13 @@ func getFromEnvOrDefault(getEnv func(key string) string, key string, defaultValu
 	}
 	return envValue
 
+}
+
+func StringInSlice(needle string, haystack []string) (found bool) {
+	sort.Strings(haystack)
+	i := sort.SearchStrings(haystack, needle)
+	if i < len(haystack) && haystack[i] == needle {
+		return true
+	}
+	return false
 }

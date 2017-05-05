@@ -2,6 +2,7 @@ package cautils
 
 import (
 	"errors"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -67,12 +68,7 @@ func (t *Token) IsValid() bool {
 func Store(filename string, content interface {
 	Serialize() string
 }) error {
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString(content.Serialize())
+	err := ioutil.WriteFile(filename, []byte(content.Serialize()), 0644)
 	if err != nil {
 		return err
 	}

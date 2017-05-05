@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -39,15 +38,6 @@ func TestTokenGeneratorLength(t *testing.T) {
 	if len(a) != 12 {
 		t.Errorf("a.length %d == %d", 12, len(a))
 	}
-}
-
-func StringInSlice(needle string, haystack []string) (found bool) {
-	sort.Strings(haystack)
-	i := sort.SearchStrings(haystack, needle)
-	if i < len(haystack) && haystack[i] == needle {
-		return true
-	}
-	return false
 }
 
 func TestTokensAreUnique(t *testing.T) {
@@ -119,13 +109,13 @@ func TestTokenStore(t *testing.T) {
 	Store("../testdata/test_tokens/"+tkn2.RandomHash, tkn2)
 
 	result, _ := ioutil.ReadFile("../testdata/test_tokens/tkn1")
-	expected := "tkn1:123\n"
+	expected := "tkn1:123"
 	if string(result) != expected {
 		t.Errorf("Persist token failed %s != %s ", string(result), expected)
 	}
 
 	result, _ = ioutil.ReadFile("../testdata/test_tokens/tkn2")
-	expected = "tkn2:1515151123\n"
+	expected = "tkn2:1515151123"
 	if string(result) != expected {
 		t.Errorf("Persist token failed %s != %s ", result, expected)
 	}
