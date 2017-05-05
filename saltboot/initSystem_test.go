@@ -14,7 +14,7 @@ func TestActionCommandRunCommandOrderASC(t *testing.T) {
 		CommandOrderASC: true,
 	}
 
-	resp := s.ActionCommand("service", true)
+	resp := s.ActionCommand("service", START_ACTION)
 
 	expected := []string{"bin", "start", "service"}
 	if strings.Join(resp, "") != strings.Join(expected, "") {
@@ -29,7 +29,7 @@ func TestActionCommandRunCommandOrderDESC(t *testing.T) {
 		CommandOrderASC: false,
 	}
 
-	resp := s.ActionCommand("service", true)
+	resp := s.ActionCommand("service", START_ACTION)
 
 	expected := []string{"bin", "service", "start"}
 	if strings.Join(resp, "") != strings.Join(expected, "") {
@@ -44,7 +44,7 @@ func TestActionCommandCommandOrderASC(t *testing.T) {
 		CommandOrderASC: true,
 	}
 
-	resp := s.ActionCommand("service", false)
+	resp := s.ActionCommand("service", STOP_ACTION)
 
 	expected := []string{"bin", "stop", "service"}
 	if strings.Join(resp, "") != strings.Join(expected, "") {
@@ -59,7 +59,7 @@ func TestActionCommandCommandOrderDESC(t *testing.T) {
 		CommandOrderASC: false,
 	}
 
-	resp := s.ActionCommand("service", false)
+	resp := s.ActionCommand("service", STOP_ACTION)
 
 	expected := []string{"bin", "service", "stop"}
 	if strings.Join(resp, "") != strings.Join(expected, "") {
@@ -134,8 +134,8 @@ func TestGetInitSystemSystemD(t *testing.T) {
 
 	resp := GetInitSystem(stat)
 
-	if resp != SYSYEM_D {
-		t.Errorf("wrong init system found %s == %s", SYSYEM_D, resp)
+	if resp != SYSTEM_D {
+		t.Errorf("wrong init system found %s == %s", SYSTEM_D, resp)
 	}
 }
 

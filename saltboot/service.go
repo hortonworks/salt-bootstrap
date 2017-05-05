@@ -9,10 +9,20 @@ import (
 	"strings"
 )
 
-func LaunchService(service string) (resp model.Response, err error) {
-	log.Printf("[LaunchService] check if service: %s is running", service)
-	psOutput, _ := ExecCmd("ps", "aux")
-	alreadyRunning := strings.Contains(psOutput, service)
+func RestartService(service string) (model.Response, error) {
+	alreadyRunning, psOutput := IsServiceRunning(service)
+
+	if alreadyRunning {
+		log.Printf("[RestartService] %s is already running %s, restart", service, psOutput)
+		return SetServiceState(service, RESTART_ACTION)
+	} else {
+		log.Printf("[RestartService] %s is not running (no need to stop first) and will be started", service)
+		return LaunchService(service)
+	}
+}
+
+func LaunchService(service string) (model.Response, error) {
+	alreadyRunning, psOutput := IsServiceRunning(service)
 
 	if alreadyRunning {
 		log.Printf("[LaunchService] %s is already running %s", service, psOutput)
@@ -21,21 +31,32 @@ func LaunchService(service string) (resp model.Response, err error) {
 		log.Printf("[LaunchService] %s is not running and will be started", service)
 	}
 
-	return SetServiceState(service, true)
+	return SetServiceState(service, START_ACTION)
 }
 
-func StopService(service string) (resp model.Response, err error) {
-	return SetServiceState(service, false)
+func StopService(service string) (model.Response, error) {
+	return SetServiceState(service, STOP_ACTION)
 }
 
-func SetServiceState(service string, up bool) (resp model.Response, err error) {
+func IsServiceRunning(service string) (bool, string) {
+	log.Printf("[IsServiceRunning] check if service: %s is running", service)
+	psOutput, _ := ExecCmd("ps", "aux")
+	return strings.Contains(psOutput, service), psOutput
+}
+
+func SetServiceState(service string, serviceAction string) (resp model.Response, err error) {
 	initSystem := GetInitSystem(os.Stat)
-	action := initSystem.ActionCommand(service, up)
+	action := initSystem.ActionCommand(service, serviceAction)
 	result, err := ExecCmd(action[0], action[1:len(action)]...)
 	if err != nil {
 		return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 	}
-	state := initSystem.StateCommand(service, up)
+	var state []string
+	if serviceAction == STOP_ACTION {
+		state = initSystem.StateCommand(service, false)
+	} else {
+		state = initSystem.StateCommand(service, true)
+	}
 	result, err = ExecCmd(state[0], state[1:len(state)]...)
 	if err != nil {
 		return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
