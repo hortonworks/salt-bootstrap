@@ -136,14 +136,6 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err)
 	}
 
-	grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
-	grainYaml, err := yaml.Marshal(grainConfig)
-	if err != nil {
-		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
-		resp.WriteHttp(w)
-		return
-	}
-
 	baseDir := req.Header.Get("salt-minion-base-dir")
 
 	err = os.MkdirAll(baseDir+"/etc/salt/minion.d", 0755)
@@ -173,11 +165,21 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = ioutil.WriteFile(baseDir+"/etc/salt/grains", grainYaml, 0644)
-	if err != nil {
-		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
-		resp.WriteHttp(w)
-		return
+	grainConfigPath := baseDir + "/etc/salt/grains"
+	if isGrainsConfigNeeded(grainConfigPath) {
+		grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
+		grainYaml, err := yaml.Marshal(grainConfig)
+		if err != nil {
+			resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+			resp.WriteHttp(w)
+			return
+		}
+		err = ioutil.WriteFile(grainConfigPath, grainYaml, 0644)
+		if err != nil {
+			resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+			resp.WriteHttp(w)
+			return
+		}
 	}
 
 	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
@@ -379,6 +381,24 @@ func distributePillarImpl(distributeActionRequest func([]string, string, string,
 		result = append(result, res)
 	}
 	return result
+}
+
+func isGrainsConfigNeeded(grainConfigLocation string) bool {
+	log.Println("[isGrainsConfigNeeded] check whether salt grains are empty, config file: " + grainConfigLocation)
+	b, err := ioutil.ReadFile(grainConfigLocation)
+	if err == nil && len(b) > 0 {
+		var grains GrainConfig = GrainConfig{}
+		if err := yaml.Unmarshal(b, &grains); err != nil {
+			log.Printf("[isGrainsConfigNeeded] failed to unmarshal grain config file: %s", err.Error())
+			return true
+		}
+		if grains.Roles != nil && len(grains.Roles) > 0 {
+			log.Printf("[isGrainsConfigNeeded] there are roles already defined: %s, no need to create new config", grains.Roles)
+			return false
+		}
+	}
+	log.Println("[isGrainsConfigNeeded] there is no grain config present at the moment, config is required")
+	return true
 }
 
 func isSaltMinionRestartNeeded(servers []string) bool {
