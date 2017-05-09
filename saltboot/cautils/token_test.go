@@ -44,7 +44,7 @@ func TestTokensAreUnique(t *testing.T) {
 	hashes := []string{}
 	for i := 1; i <= 1000; i++ {
 		a := RandomString(10)
-		if StringInSlice(a, hashes) {
+		if FindStringInSlice(a, hashes) {
 			t.Errorf("Token is not unique")
 		} else {
 			hashes = append(hashes, a)

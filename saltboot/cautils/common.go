@@ -67,11 +67,8 @@ func getFromEnvOrDefault(getEnv func(key string) string, key string, defaultValu
 
 }
 
-func StringInSlice(needle string, haystack []string) (found bool) {
+func FindStringInSlice(needle string, haystack []string) (found bool) {
 	sort.Strings(haystack)
 	i := sort.SearchStrings(haystack, needle)
-	if i < len(haystack) && haystack[i] == needle {
-		return true
-	}
-	return false
+	return i < len(haystack) && haystack[i] == needle
 }

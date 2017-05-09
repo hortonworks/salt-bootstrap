@@ -164,7 +164,7 @@ func (credentials *Credentials) DistributeClientCredentials(user string, pass st
 	}
 
 	for _, clientip := range credentials.Clients.Clients {
-		if cautils.StringInSlice(clientip, servers) {
+		if cautils.FindStringInSlice(clientip, servers) {
 			continue
 		}
 		tmpToken := cautils.NewToken(10, 10)
