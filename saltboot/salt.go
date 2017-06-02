@@ -27,9 +27,10 @@ type SaltAuth struct {
 }
 
 type SaltMaster struct {
-	Address string   `json:"address"`
-	Auth    SaltAuth `json:"auth,omitempty"`
-	Domain  string   `json:"domain,omitempty"`
+	Address  string   `json:"address"`
+	Auth     SaltAuth `json:"auth,omitempty"`
+	Hostname *string  `json:"hostName,omitempty"`
+	Domain   string   `json:"domain,omitempty"`
 }
 
 type SaltMinion struct {
@@ -38,6 +39,7 @@ type SaltMinion struct {
 	Server    string   `json:"server,omitempty"`
 	Servers   []string `json:"servers,omitempty"`
 	HostGroup string   `json:"hostGroup,omitempty"`
+	Hostname  *string  `json:"hostName,omitempty"`
 	Domain    string   `json:"domain,omitempty"`
 }
 
@@ -131,7 +133,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMinion.Domain = saltActionRequest.Master.Domain
 	}
 
-	err = ensureIpv6Resolvable(saltMinion.Domain)
+	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain)
 	if err != nil {
 		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err)
 	}
@@ -226,7 +228,7 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMaster = saltActionRequest.Master
 	}
 
-	ensureIpv6Resolvable(saltMaster.Domain)
+	ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain)
 	if err != nil {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err)
 	}

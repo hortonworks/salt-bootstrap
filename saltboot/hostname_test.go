@@ -25,7 +25,7 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 		return nil
 	}
 
-	updateIpv6HostName("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
+	updateHostsFile("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
 
 	expected := `
 127.0.0.1	localhost
@@ -59,7 +59,7 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 		return nil
 	}
 
-	updateIpv6HostName("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
+	updateHostsFile("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
 
 	expected := `
 127.0.0.1	localhost
@@ -95,7 +95,7 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 		return nil
 	}
 
-	updateIpv6HostName("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
+	updateHostsFile("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
 
 	expected := `
 127.0.0.1	localhost
@@ -131,7 +131,7 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 		return nil
 	}
 
-	updateIpv6HostName("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
+	updateHostsFile("hostname-1", "example.com", "hosts", getIpv4Address, readFile, writeFile)
 
 	expected := `
 127.0.0.1	localhost
@@ -168,7 +168,7 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 		return nil
 	}
 
-	updateIpv6HostName("hostname-1", ".compute.internal", "hosts", getIpv4Address, readFile, writeFile)
+	updateHostsFile("hostname-1", ".compute.internal", "hosts", getIpv4Address, readFile, writeFile)
 
 	expected := `
 127.0.0.1	localhost
