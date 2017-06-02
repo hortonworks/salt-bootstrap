@@ -5,6 +5,7 @@
 release
 build
 saltboot.test
+vendor/
 
 ## Directory-based project format:
 .idea/
