@@ -112,7 +112,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	var saltActionRequest SaltActionRequest
 	err := decoder.Decode(&saltActionRequest)
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] couldn't decode json: %s", err)
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
 		return
@@ -120,7 +120,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	index, err := strconv.Atoi(req.URL.Query().Get("index"))
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err)
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err.Error())
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
 		return
@@ -135,7 +135,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain)
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err)
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
 	}
 
 	baseDir := req.Header.Get("salt-minion-base-dir")
@@ -206,16 +206,15 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	decoder := json.NewDecoder(req.Body)
 	var saltActionRequest SaltActionRequest
-	err := decoder.Decode(&saltActionRequest)
-	if err != nil {
-		log.Printf("[SaltServerRunRequestHandler] [ERROR] couldn't decode json: %s", err)
+	if err := decoder.Decode(&saltActionRequest); err != nil {
+		log.Printf("[SaltServerRunRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
 
 	index, err := strconv.Atoi(req.URL.Query().Get("index"))
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err)
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
@@ -228,9 +227,8 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMaster = saltActionRequest.Master
 	}
 
-	ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain)
-	if err != nil {
-		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err)
+	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain); err != nil {
+		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
 	}
 
 	var responses []model.Response
@@ -303,7 +301,7 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
 	var saltPillar SaltPillar
 	err := decoder.Decode(&saltPillar)
 	if err != nil {
-		log.Printf("[SaltPillarRequestHandler] [ERROR] couldn't decode json: %s", err)
+		log.Printf("[SaltPillarRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
@@ -326,7 +324,7 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	outStr, err := saltPillar.WritePillar()
 	if err != nil {
-		log.Printf("[SaltPillarRequestHandler] failed to execute salt pillar save config: %s", err.Error())
+		log.Printf("[SaltPillarRequestHandler] [ERROR] failed to execute salt pillar save config: %s", err.Error())
 		model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}.WriteHttp(w)
 	} else {
 		cResp := model.Response{Status: outStr}.WriteHttp(w)
@@ -341,7 +339,7 @@ func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	var saltActionRequest SaltActionRequest
 	err := decoder.Decode(&saltActionRequest)
 	if err != nil {
-		log.Printf("[SaltActionDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
+		log.Printf("[SaltActionDistributeRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
@@ -351,7 +349,9 @@ func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	result := saltActionRequest.distributeAction(user, pass, signature, signed)
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltActionDistributeRequestHandler] distribute salt state command request executed: %s", cResp.String())
-	json.NewEncoder(w).Encode(cResp)
+	if err := json.NewEncoder(w).Encode(cResp); err != nil {
+		log.Printf("[SaltActionDistributeRequestHandler] [ERROR] couldn't encode json: %s", err.Error())
+	}
 }
 
 func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request) {
@@ -361,7 +361,7 @@ func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	var saltPillar SaltPillar
 	err := decoder.Decode(&saltPillar)
 	if err != nil {
-		log.Printf("[SaltPillarDistributeRequestHandler] [ERROR] couldn't decode json: %s", err)
+		log.Printf("[SaltPillarDistributeRequestHandler] [ERROR] couldn't decode json: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
 	}
@@ -374,7 +374,9 @@ func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltPillarDistributeRequestHandler] distribute salt pillar request executed: %s", cResp.String())
-	json.NewEncoder(w).Encode(cResp)
+	if err := json.NewEncoder(w).Encode(cResp); err != nil {
+		log.Printf("[SaltActionDistributeRequestHandler] [ERROR] couldn't encode json: %s", err.Error())
+	}
 }
 
 func distributePillarImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response,
@@ -391,7 +393,7 @@ func isGrainsConfigNeeded(grainConfigLocation string) bool {
 	if err == nil && len(b) > 0 {
 		var grains GrainConfig = GrainConfig{}
 		if err := yaml.Unmarshal(b, &grains); err != nil {
-			log.Printf("[isGrainsConfigNeeded] failed to unmarshal grain config file: %s", err.Error())
+			log.Printf("[isGrainsConfigNeeded] [ERROR] failed to unmarshal grain config file: %s", err.Error())
 			return true
 		}
 		if grains.Roles != nil && len(grains.Roles) > 0 {
@@ -410,7 +412,7 @@ func isSaltMinionRestartNeeded(servers []string) bool {
 	if err == nil && len(b) > 0 {
 		var saltMasterIps map[string][]string = make(map[string][]string)
 		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
-			log.Printf("[isSaltMinionRestartNeeded] failed to unmarshal salt master config file: %s", err.Error())
+			log.Printf("[isSaltMinionRestartNeeded] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
 			return false
 		}
 		ipList := saltMasterIps["master"]

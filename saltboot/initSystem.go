@@ -22,6 +22,8 @@ const (
 	RESTART_ACTION = "restart"
 )
 
+var stat = os.Stat
+
 var (
 	SYSTEM_D   = InitSystem{ActionBin: "/bin/systemctl", StateBin: "/bin/systemctl", Start: START_ACTION, Stop: STOP_ACTION, Restart: RESTART_ACTION, Enable: "enable", Disable: "disable", CommandOrderASC: true}
 	SYS_V_INIT = InitSystem{ActionBin: "/sbin/service", StateBin: "/sbin/chkconfig", Start: START_ACTION, Stop: STOP_ACTION, Restart: RESTART_ACTION, Enable: "on", Disable: "off", CommandOrderASC: false}
@@ -63,7 +65,7 @@ func (system InitSystem) Error() string {
 	return "Failed to determine init system"
 }
 
-func GetInitSystem(stat func(name string) (os.FileInfo, error)) (system InitSystem) {
+func GetInitSystem() (system InitSystem) {
 	if _, err := stat("/bin/systemctl"); err == nil {
 		log.Println("[GetInitSystem] /bin/systemctl found, assume systemd")
 		return SYSTEM_D

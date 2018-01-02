@@ -1,0 +1,17 @@
+version: 2
+jobs:
+  build:
+    machine:
+      services:
+        - docker
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: make build-docker
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build

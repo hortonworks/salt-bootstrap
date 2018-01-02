@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
@@ -64,8 +63,8 @@ func TestDistributeActionImplMaster(t *testing.T) {
 }
 
 func TestSaltMinionRunRequestHandler(t *testing.T) {
-	os.Setenv(ENV_TYPE, "test")
-	defer os.Clearenv()
+	watchCommands = true
+	defer func() { watchCommands = false }()
 
 	tempDirName, _ := ioutil.TempDir("", "saltminionruntest")
 	defer os.RemoveAll(tempDirName)
@@ -87,34 +86,42 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	req.Header.Set("salt-minion-base-dir", tempDirName)
 	w := httptest.NewRecorder()
 
-	SaltMinionRunRequestHandler(w, req)
+	go func() {
+		SaltMinionRunRequestHandler(w, req)
 
-	if _, err := os.Stat(tempDirName + "/etc/salt/minion.d"); os.IsNotExist(err) {
-		t.Errorf("missing minion dir %s", tempDirName+"/etc/salt/minion.d")
-	}
+		if _, err := os.Stat(tempDirName + "/etc/salt/minion.d"); os.IsNotExist(err) {
+			t.Errorf("missing minion dir %s", tempDirName+"/etc/salt/minion.d")
+		}
 
-	content, _ := ioutil.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
-	var masters map[string][]string
-	yaml.Unmarshal(content, &masters)
-	expected := map[string][]string{"master": []string{"server"}}
-	if masters["master"][0] != expected["master"][0] {
-		t.Errorf("master config not match %s == %s", expected, string(content))
-	}
+		content, _ := ioutil.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
+		var masters map[string][]string
+		yaml.Unmarshal(content, &masters)
+		expected := map[string][]string{"master": []string{"server"}}
+		if masters["master"][0] != expected["master"][0] {
+			t.Errorf("master config not match %s == %s", expected, string(content))
+		}
 
-	grainYaml, _ := ioutil.ReadFile(tempDirName + "/etc/salt/grains")
-	err := yaml.Unmarshal(grainYaml, &GrainConfig{})
-	if err != nil {
-		t.Errorf("couldn't unmarshall grain yaml: %s", err)
-	}
+		grainYaml, _ := ioutil.ReadFile(tempDirName + "/etc/salt/grains")
+		err := yaml.Unmarshal(grainYaml, &GrainConfig{})
+		if err != nil {
+			t.Errorf("couldn't unmarshall grain yaml: %s", err)
+		}
+	}()
 
-	if os.Getenv(EXECUTED_COMMANDS) != "hostname -s:hostname -d:hostname -I:ps aux:/sbin/service salt-minion start:/sbin/chkconfig salt-minion on:" {
-		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
-	}
+	checkExecutedCommands([]string{
+		"hostname -s",
+		"hostname -d",
+		"hostname -I",
+		"hostname ",
+		"ps aux",
+		"/bin/systemctl start salt-minion",
+		"/bin/systemctl enable salt-minion",
+	}, t)
 }
 
 func TestSaltMinionStopRequestHandler(t *testing.T) {
-	os.Setenv(ENV_TYPE, "test")
-	defer os.Clearenv()
+	watchCommands = true
+	defer func() { watchCommands = false }()
 
 	request := SaltActionRequest{
 		Master: SaltMaster{Address: "address"},
@@ -132,16 +139,17 @@ func TestSaltMinionStopRequestHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/?index=0", body)
 	w := httptest.NewRecorder()
 
-	SaltMinionStopRequestHandler(w, req)
+	go SaltMinionStopRequestHandler(w, req)
 
-	if os.Getenv(EXECUTED_COMMANDS) != "/sbin/service salt-minion stop:/sbin/chkconfig salt-minion off:" {
-		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
-	}
+	checkExecutedCommands([]string{
+		"/bin/systemctl stop salt-minion",
+		"/bin/systemctl disable salt-minion",
+	}, t)
 }
 
 func TestSaltServerRunRequestHandler(t *testing.T) {
-	os.Setenv(ENV_TYPE, "test")
-	defer os.Clearenv()
+	watchCommands = true
+	defer func() { watchCommands = false }()
 
 	master := SaltMaster{}
 	body := bytes.NewBuffer(make([]byte, 0))
@@ -151,26 +159,39 @@ func TestSaltServerRunRequestHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/?index=0", body)
 	w := httptest.NewRecorder()
 
-	SaltServerRunRequestHandler(w, req)
+	go SaltServerRunRequestHandler(w, req)
 
-	pattern := "^hostname -s:hostname -d:hostname -I:grep saltuser /etc/passwd:adduser --no-create-home -G wheel -s /sbin/nologin --password \\$6\\$([a-zA-Z\\$0-9/.]+) saltuser:ps aux:/sbin/service salt-master start:/sbin/chkconfig salt-master on:ps aux:/sbin/service salt-api start:/sbin/chkconfig salt-api on:$"
-	if m, err := regexp.MatchString(pattern, os.Getenv(EXECUTED_COMMANDS)); m == false || err != nil {
-		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
-	}
+	checkExecutedCommands([]string{
+		"hostname -s",
+		"hostname -d",
+		"hostname -I",
+		"hostname ",
+		"grep saltuser /etc/passwd",
+		"^adduser --no-create-home -G wheel -s /sbin/nologin --password \\$6\\$([a-zA-Z\\$0-9/.]+) saltuser",
+		"ps aux",
+		"/bin/systemctl start salt-master",
+		"/bin/systemctl enable salt-master",
+		"ps aux",
+		"/bin/systemctl start salt-api",
+		"/bin/systemctl enable salt-api",
+	}, t)
 }
 
 func TestSaltServerStopRequestHandler(t *testing.T) {
-	os.Setenv(ENV_TYPE, "test")
-	defer os.Clearenv()
+	watchCommands = true
+	defer func() { watchCommands = false }()
 
 	req := httptest.NewRequest("GET", "/?index=0", nil)
 	w := httptest.NewRecorder()
 
-	SaltServerStopRequestHandler(w, req)
+	go SaltServerStopRequestHandler(w, req)
 
-	if os.Getenv(EXECUTED_COMMANDS) != "/sbin/service salt-master stop:/sbin/chkconfig salt-master off:/sbin/service salt-api stop:/sbin/chkconfig salt-api off:" {
-		t.Errorf("wrong commands were executed: %s", os.Getenv(EXECUTED_COMMANDS))
-	}
+	checkExecutedCommands([]string{
+		"/bin/systemctl stop salt-master",
+		"/bin/systemctl disable salt-master",
+		"/bin/systemctl stop salt-api",
+		"/bin/systemctl disable salt-api",
+	}, t)
 }
 
 func TestWritePillar(t *testing.T) {

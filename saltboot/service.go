@@ -2,11 +2,11 @@ package saltboot
 
 import (
 	"net/http"
-	"os"
 
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"log"
 	"strings"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 func RestartService(service string) (model.Response, error) {
@@ -45,7 +45,7 @@ func IsServiceRunning(service string) (bool, string) {
 }
 
 func SetServiceState(service string, serviceAction string) (resp model.Response, err error) {
-	initSystem := GetInitSystem(os.Stat)
+	initSystem := GetInitSystem()
 	action := initSystem.ActionCommand(service, serviceAction)
 	result, err := ExecCmd(action[0], action[1:len(action)]...)
 	if err != nil {

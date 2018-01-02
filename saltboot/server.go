@@ -46,7 +46,10 @@ func (s *Servers) WriteToFile() (outStr string, err error) {
 		return "Failed to write to " + file, err
 	}
 
-	f.Close()
+	if err := f.Close(); err != nil {
+		log.Printf("[Servers.writeToFile] unable to close file (%s): %s", file, err.Error())
+		return "Failed to close " + file, err
+	}
 
 	return "Server list successfully appended to " + file, err
 }
@@ -65,7 +68,7 @@ func ServerRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	outStr, err := servers.WriteToFile()
 	if err != nil {
-		log.Printf("[serverRequestHandler] failed to write server address to file: %s", err.Error())
+		log.Printf("[serverRequestHandler] [ERROR] failed to write server address to file: %s", err.Error())
 		model.Response{Status: err.Error(), StatusCode: http.StatusInternalServerError}.WriteHttp(w)
 	} else {
 		cResp := model.Response{Status: outStr}.WriteHttp(w)
