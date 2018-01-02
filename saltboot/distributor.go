@@ -11,9 +11,10 @@ import (
 	"sync"
 
 	"fmt"
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"io"
 	"mime/multipart"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 func DistributeRequest(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
@@ -41,7 +42,7 @@ func DistributeRequest(clients []string, endpoint string, user string, pass stri
 			httpClient := &http.Client{}
 			resp, err := httpClient.Do(req)
 			if err != nil {
-				log.Printf("[distribute] Failed to send request to: %s, error: %s", client, err.Error())
+				log.Printf("[distribute] [ERROR] Failed to send request to: %s, error: %s", client, err.Error())
 				c <- model.Response{StatusCode: http.StatusInternalServerError, ErrorText: err.Error(), Address: client}
 				return
 			}
@@ -49,7 +50,9 @@ func DistributeRequest(clients []string, endpoint string, user string, pass stri
 			body, _ := ioutil.ReadAll(resp.Body)
 			decoder := json.NewDecoder(strings.NewReader(string(body)))
 			var response model.Response
-			decoder.Decode(&response)
+			if err := decoder.Decode(&response); err != nil {
+				log.Printf("[distribute] [ERROR] Failed to decode response, error: %s", err.Error())
+			}
 			response.Address = client
 
 			if response.StatusCode == 0 {
@@ -57,7 +60,7 @@ func DistributeRequest(clients []string, endpoint string, user string, pass stri
 			}
 			log.Printf("[distribute] Request to: %s result: %s", client, response.String())
 			c <- response
-			defer resp.Body.Close()
+			defer closeIt(resp.Body)
 		}(client, idx)
 	}
 	wg.Wait()
@@ -90,7 +93,7 @@ func Distribute(clients []string, payload []byte, endpoint string, user string, 
 			httpClient := &http.Client{}
 			resp, err := httpClient.Do(req)
 			if err != nil {
-				log.Printf("[distribute] Failed to send request to: %s, error: %s", client, err.Error())
+				log.Printf("[distribute] [ERROR] Failed to send request to: %s, error: %s", client, err.Error())
 				c <- model.Response{StatusCode: http.StatusInternalServerError, ErrorText: err.Error(), Address: client}
 				return
 			}
@@ -98,7 +101,9 @@ func Distribute(clients []string, payload []byte, endpoint string, user string, 
 			body, _ := ioutil.ReadAll(resp.Body)
 			decoder := json.NewDecoder(strings.NewReader(string(body)))
 			var response model.Response
-			decoder.Decode(&response)
+			if err := decoder.Decode(&response); err != nil {
+				log.Printf("[distribute] [ERROR] Failed to decode response, error: %s", err.Error())
+			}
 			response.Address = client
 
 			if response.StatusCode == 0 {
@@ -106,7 +111,7 @@ func Distribute(clients []string, payload []byte, endpoint string, user string, 
 			}
 			log.Printf("[distribute] Request to: %s result: %s", client, response.String())
 			c <- response
-			defer resp.Body.Close()
+			defer closeIt(resp.Body)
 		}(client)
 	}
 	wg.Wait()
@@ -145,7 +150,7 @@ func DistributeFileUploadRequest(endpoint string, user string, pass string, targ
 		return c
 	}
 
-	bodyWriter.Close()
+	closeIt(bodyWriter)
 	fileContent := bodyBuf.Bytes()
 
 	for i, target := range targets {
@@ -168,13 +173,13 @@ func DistributeFileUploadRequest(endpoint string, user string, pass string, targ
 			httpClient := &http.Client{}
 			resp, err := httpClient.Do(req)
 			if err != nil {
-				log.Printf("[DistributeFileUploadRequest] Failed to send request to: %s, error: %s", target, err.Error())
+				log.Printf("[DistributeFileUploadRequest] [ERROR] Failed to send request to: %s, error: %s", target, err.Error())
 				c <- model.Response{StatusCode: http.StatusInternalServerError, ErrorText: err.Error(), Address: target}
 				return
 			}
 
 			body, _ := ioutil.ReadAll(resp.Body)
-			defer resp.Body.Close()
+			defer closeIt(resp.Body)
 			if resp.StatusCode != http.StatusCreated {
 				log.Printf("[DistributeFileUploadRequest] Error response from: %s, error: %s", target, body)
 				c <- model.Response{StatusCode: resp.StatusCode, ErrorText: string(body), Address: target}

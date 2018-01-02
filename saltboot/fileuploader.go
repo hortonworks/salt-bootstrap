@@ -3,7 +3,6 @@ package saltboot
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 func FileUploadDistributeHandler(w http.ResponseWriter, req *http.Request) {
@@ -22,10 +23,12 @@ func FileUploadDistributeHandler(w http.ResponseWriter, req *http.Request) {
 	permissions := req.FormValue("permissions")
 	file, header, err := req.FormFile("file")
 	if err != nil {
-		log.Printf("[FileUploadDistributeHandler] form file error: " + err.Error())
+		log.Printf("[FileUploadDistributeHandler] [ERROR] form file error: %s", err.Error())
 		resp := model.Responses{Responses: []model.Response{{Status: err.Error(), StatusCode: http.StatusBadRequest}}}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("[FileUploadDistributeHandler] [ERROR] failed to encode resp: %s", err.Error())
+		}
 		return
 	}
 
@@ -35,7 +38,9 @@ func FileUploadDistributeHandler(w http.ResponseWriter, req *http.Request) {
 	result := fileDistributeActionImpl(user, pass, strings.Split(targets, ","), path, permissions, file, header, signature)
 	cResp := model.Responses{Responses: result}
 	log.Printf("[FileUploadDistributeHandler] distribute file upload request executed: %s", cResp.String())
-	json.NewEncoder(w).Encode(cResp)
+	if err := json.NewEncoder(w).Encode(cResp); err != nil {
+		log.Printf("[FileUploadDistributeHandler] [ERROR] failed to encode cResp: %s", err.Error())
+	}
 }
 
 func fileDistributeActionImpl(user string, pass string, targets []string, path string, permissions string,
@@ -56,20 +61,23 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 
 	file, header, err := req.FormFile("file")
 	if err != nil {
-		log.Printf("[FileUploadHandler] form file error: " + err.Error())
+		log.Printf("[FileUploadHandler] [ERROR] form file error: %s", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("400 Bad Request"))
+		if _, err := w.Write([]byte("400 Bad Request")); err != nil {
+			log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+		}
 		fmt.Fprintln(w, err)
 		return
 	}
 
 	b, _ := ioutil.ReadAll(file)
 
-	err = os.MkdirAll(path, 0744)
-	if err != nil {
-		log.Printf("[FileUploadHandler] make dir error: " + err.Error())
+	if err := os.MkdirAll(path, 0744); err != nil {
+		log.Printf("[FileUploadHandler] [ERROR] make dir error: %s", err.Error())
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("403 Forbidden"))
+		if _, err := w.Write([]byte("403 Forbidden")); err != nil {
+			log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+		}
 		fmt.Fprintln(w, err)
 		return
 	}
@@ -85,29 +93,41 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 
 	if strings.Contains(header.Filename, ".zip") {
 		log.Println("[FileUploadHandler] unzip file from /tmp")
-		ioutil.WriteFile("/tmp/"+header.Filename, b, permissions)
-		err = Unzip("/tmp/"+header.Filename, path)
-		if err != nil {
-			log.Printf("[FileUploadHandler] unzipt file error: " + err.Error())
+		if err := ioutil.WriteFile("/tmp/"+header.Filename, b, permissions); err != nil {
+			log.Printf("[FileUploadHandler] [ERROR] unable to write file: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 Internal Server Error"))
+			if _, err := w.Write([]byte("500 Internal Server Error")); err != nil {
+				log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+			}
+			fmt.Fprintln(w, err)
+			return
+		}
+		if err := Unzip("/tmp/"+header.Filename, path); err != nil {
+			log.Printf("[FileUploadHandler] [ERROR] unzipt file error: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			if _, err := w.Write([]byte("500 Internal Server Error")); err != nil {
+				log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+			}
 			fmt.Fprintln(w, err)
 			return
 		}
 	} else {
 		log.Printf("[FileUploadHandler] FileName: " + header.Filename)
-		err = ioutil.WriteFile(path+"/"+header.Filename, b, permissions)
-		if err != nil {
-			log.Printf("[fileUploadHandler] wirte file error: " + err.Error())
+		if err := ioutil.WriteFile(path+"/"+header.Filename, b, permissions); err != nil {
+			log.Printf("[fileUploadHandler] [ERROR] wirte file error: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 Internal Server Error"))
+			if _, err := w.Write([]byte("500 Internal Server Error")); err != nil {
+				log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+			}
 			fmt.Fprintln(w, err)
 			return
 		}
 	}
 
-	defer file.Close()
+	defer closeIt(file)
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("201 Created "))
+	if _, err := w.Write([]byte("201 Created ")); err != nil {
+		log.Printf("[FileUploadHandler] [ERROR] couldn't write response: %s", err.Error())
+	}
 	fmt.Fprintf(w, "File %s uploaded successfully.", header.Filename)
 }

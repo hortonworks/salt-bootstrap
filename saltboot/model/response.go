@@ -56,7 +56,7 @@ func (r Response) WriteBadRequestHttp(w http.ResponseWriter) Response {
 func EncodeJson(r Response, w http.ResponseWriter) Response {
 	err := json.NewEncoder(w).Encode(r)
 	if err != nil {
-		log.Printf("[writehttp] failed to create json from model: %s", err.Error())
+		log.Printf("[writehttp] [ERROR] failed to create json from model: %s", err.Error())
 	}
 	return r
 }

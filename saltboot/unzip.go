@@ -13,25 +13,29 @@ func Unzip(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer closeIt(r)
 
 	for _, f := range r.File {
 		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
-		defer rc.Close()
+		defer closeIt(rc)
 
 		var path string
 		if f.FileInfo().IsDir() {
 			path = filepath.Join(dest, f.Name)
-			os.MkdirAll(path, f.Mode())
+			if err := os.MkdirAll(path, f.Mode()); err != nil {
+				return err
+			}
 		} else {
 			if strings.ContainsRune(f.Name, os.PathSeparator) {
 				last := strings.LastIndex(f.Name, string(os.PathSeparator))
 				dirs := f.Name[0:last]
 				name := f.Name[last+1 : len(f.Name)]
-				os.MkdirAll(filepath.Join(dest, dirs), 0744)
+				if err := os.MkdirAll(filepath.Join(dest, dirs), 0744); err != nil {
+					return err
+				}
 				path = filepath.Join(dest, dirs, name)
 			} else {
 				path = filepath.Join(dest, f.Name)
@@ -41,7 +45,7 @@ func Unzip(src, dest string) error {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer closeIt(f)
 
 			_, err = io.Copy(f, rc)
 			if err != nil {

@@ -30,7 +30,7 @@ func TestClientHostnameHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/", bytes.NewBuffer(make([]byte, 0)))
 
-	ClientHostnameHandler(w, r)
+	clientHostnameHandlerImpl(w, r, func() (string, error) { return "hostname", nil })
 
 	if w.Code != 200 {
 		t.Error("couldn't resolve hostname")

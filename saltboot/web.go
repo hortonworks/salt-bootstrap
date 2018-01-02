@@ -55,5 +55,7 @@ func NewCloudbreakBootstrapWeb() {
 
 	log.Printf("[web] starting server at: %s", address)
 	http.Handle("/", r)
-	http.ListenAndServe(address, nil)
+	if err := http.ListenAndServe(address, nil); err != nil {
+		log.Printf("[web] [ERROR] unable to ListenAndServe: %s", err.Error())
+	}
 }

@@ -18,9 +18,13 @@ func main() {
 
 	logFile, err := os.OpenFile("/var/log/saltboot.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		log.Printf("Error opening log file: %v", err)
+		log.Printf("Error opening log file: %s", err.Error())
 	}
-	defer logFile.Close()
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			panic(err)
+		}
+	}()
 	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	log.Println("[main] Launch salt-bootstrap application")

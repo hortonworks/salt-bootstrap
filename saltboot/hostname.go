@@ -3,7 +3,6 @@ package saltboot
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 )
 
@@ -11,6 +10,9 @@ const EXAMPLE_DOMAIN = ".example.com"
 const HOSTS_FILE = "/etc/hosts"
 const NETWORK_SYSCONFIG_FILE = "/etc/sysconfig/network"
 const HOSTNAME_FILE = "/etc/hostname"
+
+var readFile = ioutil.ReadFile
+var writeFile = ioutil.WriteFile
 
 func getIpv4Address() (string, error) {
 	return ExecCmd("hostname", "-I")
@@ -65,18 +67,22 @@ func ensureHostIsResolvable(customHostname *string, customDomain string) error {
 		domain = "." + domain
 	}
 
-	updateHostsFile(hostName, domain, HOSTS_FILE, getIpv4Address, ioutil.ReadFile, ioutil.WriteFile)
-	updateSysConfig(hostName, domain, NETWORK_SYSCONFIG_FILE, ioutil.ReadFile, ioutil.WriteFile)
-	updateHostNameFile(hostName, HOSTNAME_FILE, ioutil.WriteFile)
-
+	if err := updateHostsFile(hostName, domain, HOSTS_FILE, getIpv4Address); err != nil {
+		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
+		return err
+	}
+	if err := updateSysConfig(hostName, domain, NETWORK_SYSCONFIG_FILE); err != nil {
+		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update sys config: %s", err.Error())
+		return err
+	}
+	if err := updateHostNameFile(hostName, HOSTNAME_FILE); err != nil {
+		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host name: %s", err.Error())
+		return err
+	}
 	return nil
 }
 
-func updateHostsFile(hostName string, domain string, file string,
-	getIpv4Address func() (string, error),
-	readFile func(filename string) ([]byte, error),
-	writeFile func(filename string, data []byte, perm os.FileMode) error) error {
-
+func updateHostsFile(hostName string, domain string, file string, getIpv4Address func() (string, error)) error {
 	ip, err := getIpv4Address()
 	if err != nil {
 		return err
@@ -115,10 +121,7 @@ func updateHostsFile(hostName string, domain string, file string,
 	return nil
 }
 
-func updateSysConfig(hostName string, domain string, file string,
-	readFile func(filename string) ([]byte, error),
-	writeFile func(filename string, data []byte, perm os.FileMode) error) error {
-
+func updateSysConfig(hostName string, domain string, file string) error {
 	log.Printf("[updateSysConfig] hostname: %s, domain: %s", hostName, domain)
 	b, err := readFile(file)
 	if err != nil {
@@ -146,9 +149,7 @@ func updateSysConfig(hostName string, domain string, file string,
 	return nil
 }
 
-func updateHostNameFile(hostName string, file string,
-	writeFile func(filename string, data []byte, perm os.FileMode) error) error {
-
+func updateHostNameFile(hostName string, file string) error {
 	log.Printf("[updateHostNameFile] hostname: %s", hostName)
 	err := writeFile(file, []byte(hostName), 0644)
 	if err != nil {

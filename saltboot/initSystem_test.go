@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+var initOk = func(name string) (os.FileInfo, error) {
+	return nil, nil
+}
+var initError = func(name string) (os.FileInfo, error) {
+	return nil, errors.New("file not found")
+}
+
+func init() {
+	stat = initOk
+}
+
 func TestActionCommandRunCommandOrderASC(t *testing.T) {
 	s := InitSystem{
 		ActionBin:       "bin",
@@ -128,11 +139,7 @@ func TestStateCommandCommandOrderDESC(t *testing.T) {
 }
 
 func TestGetInitSystemSystemD(t *testing.T) {
-	stat := func(name string) (os.FileInfo, error) {
-		return nil, nil
-	}
-
-	resp := GetInitSystem(stat)
+	resp := GetInitSystem()
 
 	if resp != SYSTEM_D {
 		t.Errorf("wrong init system found %s == %s", SYSTEM_D, resp)
@@ -140,11 +147,12 @@ func TestGetInitSystemSystemD(t *testing.T) {
 }
 
 func TestGetInitSystemSystemV(t *testing.T) {
-	stat := func(name string) (os.FileInfo, error) {
-		return nil, errors.New("file not found")
-	}
+	stat = initError
+	defer func() {
+		stat = initOk
+	}()
 
-	resp := GetInitSystem(stat)
+	resp := GetInitSystem()
 
 	if resp != SYS_V_INIT {
 		t.Errorf("wrong init system found %s == %s", SYS_V_INIT, resp)
