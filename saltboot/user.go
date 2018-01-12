@@ -10,7 +10,11 @@ import (
 	"github.com/kless/osutil/user/crypt/sha512_crypt"
 )
 
-const SALT_USER = "saltuser"
+const (
+	SALT_USER = "saltuser"
+	UBUNTU    = "Ubuntu"
+	DEBIAN    = "Debian"
+)
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -45,7 +49,16 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
-		result, err = ExecCmd("adduser", "--no-create-home", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
+
+		if isDebianOrUbuntu() {
+			result, err = ExecCmd("groupadd", "-r", "wheel")
+			if err == nil {
+				result, err = ExecCmd("useradd", "--no-create-home", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
+			}
+		} else {
+			log.Printf("[CreateUser] host OS is determined to be Redhat based")
+			result, err = ExecCmd("adduser", "--no-create-home", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
+		}
 
 		if err != nil {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
@@ -56,5 +69,17 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 
 	resp = model.Response{Status: result, StatusCode: http.StatusOK}
 	return resp, nil
+}
 
+func isDebianOrUbuntu() bool {
+	return isOs(UBUNTU) || isOs(DEBIAN)
+}
+
+func isOs(os string) bool {
+	out, _ := ExecCmd("grep", os, "/etc/issue")
+	if len(out) > 0 {
+		log.Printf("[CreateUser] host OS is determined to be %s", os)
+		return true
+	}
+	return false
 }
