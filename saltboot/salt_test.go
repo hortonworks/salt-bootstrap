@@ -167,6 +167,8 @@ func TestSaltServerRunRequestHandler(t *testing.T) {
 		"hostname -I",
 		"hostname ",
 		"grep saltuser /etc/passwd",
+		"grep Ubuntu /etc/issue",
+		"grep Debian /etc/issue",
 		"^adduser --no-create-home -G wheel -s /sbin/nologin --password \\$6\\$([a-zA-Z\\$0-9/.]+) saltuser",
 		"ps aux",
 		"/bin/systemctl start salt-master",
