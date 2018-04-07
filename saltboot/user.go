@@ -8,12 +8,14 @@ import (
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"github.com/kless/osutil/user/crypt/sha512_crypt"
+	"strings"
 )
 
 const (
 	SALT_USER = "saltuser"
 	UBUNTU    = "Ubuntu"
 	DEBIAN    = "Debian"
+	SUSE      = "SUSE"
 )
 
 func init() {
@@ -34,7 +36,7 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 
 	result := "Create user: OK"
 
-	//saltUser, _ := user.Lookup(SALT_USER) //requires cgo
+	// saltUser, _ := user.Lookup(SALT_USER) //requires cgo
 	out, err := ExecCmd("grep", SALT_USER, "/etc/passwd")
 
 	if len(out) == 0 || err != nil {
@@ -50,8 +52,12 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
 
-		if isDebianOrUbuntu() {
+		if shouldUseUserAdd() {
 			result, err = ExecCmd("groupadd", "-r", "wheel")
+			if err != nil && strings.Contains(err.Error(), "exit status 9") {
+				log.Printf("[CreateUser] ignore group exists error: %s", err.Error())
+				err = nil
+			}
 			if err == nil {
 				result, err = ExecCmd("useradd", "--no-create-home", "-G", "wheel", "-s", "/sbin/nologin", "--password", hash, SALT_USER)
 			}
@@ -71,8 +77,8 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 	return resp, nil
 }
 
-func isDebianOrUbuntu() bool {
-	return isOs(UBUNTU) || isOs(DEBIAN)
+func shouldUseUserAdd() bool {
+	return isOs(UBUNTU) || isOs(DEBIAN) || isOs(SUSE)
 }
 
 func isOs(os string) bool {

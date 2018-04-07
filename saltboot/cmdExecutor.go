@@ -1,13 +1,11 @@
 package saltboot
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 	"strings"
-)
-
-const (
-	ENV_TYPE = "SALT_BOOTSTRAP_ENV_TYPE"
 )
 
 var commandExecutor = func(executable string, args ...string) ([]byte, error) {
@@ -15,10 +13,11 @@ var commandExecutor = func(executable string, args ...string) ([]byte, error) {
 }
 
 func ExecCmd(executable string, args ...string) (outStr string, err error) {
-	log.Printf("[cmdExecutor] Execute command: %s %s", executable, strings.Join(args, " "))
+	command := executable + " " + strings.Join(args, " ")
+	log.Printf("[cmdExecutor] Execute command: %s", command)
 	out, e := commandExecutor(executable, args...)
 	if e != nil {
-		err = e
+		err = errors.New(fmt.Sprintf("Failed to execute command: '%s', err: %s", command, e.Error()))
 	}
 	if out != nil {
 		outStr = strings.TrimSpace(string(out))
