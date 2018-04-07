@@ -9,6 +9,7 @@ import (
 const EXAMPLE_DOMAIN = ".example.com"
 const HOSTS_FILE = "/etc/hosts"
 const NETWORK_SYSCONFIG_FILE = "/etc/sysconfig/network"
+const NETWORK_SYSCONFIG_FILE_SUSE = "/etc/sysconfig/network/config"
 const HOSTNAME_FILE = "/etc/hostname"
 
 var readFile = ioutil.ReadFile
@@ -23,7 +24,12 @@ func getFQDN() (string, error) {
 }
 
 func getHostName() (string, error) {
-	return ExecCmd("hostname", "-s")
+	out, err := ExecCmd("hostname", "-s")
+	if err != nil {
+		log.Printf("[getHostName] hostname -s returned an error, fallback to simple hostname command, err: %s", err.Error())
+		out, err = ExecCmd("hostname")
+	}
+	return out, err
 }
 
 func getDomain() (string, error) {
@@ -71,7 +77,11 @@ func ensureHostIsResolvable(customHostname *string, customDomain string) error {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
 		return err
 	}
-	if err := updateSysConfig(hostName, domain, NETWORK_SYSCONFIG_FILE); err != nil {
+	networkSysConfig := NETWORK_SYSCONFIG_FILE
+	if isOs(SUSE) {
+		networkSysConfig = NETWORK_SYSCONFIG_FILE_SUSE
+	}
+	if err := updateSysConfig(hostName, domain, networkSysConfig); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update sys config: %s", err.Error())
 		return err
 	}
@@ -128,7 +138,7 @@ func updateSysConfig(hostName string, domain string, file string) error {
 		return err
 	}
 	sysConfig := string(b)
-	log.Printf("[updateSysConfig] original sysconfig: %s", sysConfig)
+	log.Printf("[updateSysConfig] original sysconfig %s: %s", file, sysConfig)
 
 	lines := strings.Split(sysConfig, "\n")
 	var filteredLines = make([]string, 0)
@@ -140,21 +150,19 @@ func updateSysConfig(hostName string, domain string, file string) error {
 
 	hostNameString := "HOSTNAME=" + hostName + domain
 	sysConfig = strings.Join(filteredLines, "\n") + "\n" + hostNameString
-	log.Printf("[updateSysConfig] updated sysconfig: %s", sysConfig)
+	log.Printf("[updateSysConfig] updated sysconfig %s: %s", file, sysConfig)
 	err = writeFile(file, []byte(sysConfig), 0644)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func updateHostNameFile(hostName string, file string) error {
-	log.Printf("[updateHostNameFile] hostname: %s", hostName)
+	log.Printf("[updateHostNameFile] hostname: %s, file: %s", hostName, file)
 	err := writeFile(file, []byte(hostName), 0644)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
