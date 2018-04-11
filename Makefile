@@ -42,7 +42,7 @@ build-darwin:
 build-linux:
 	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux/${BINARY} main.go
 
-release: build
+release: build-docker
 	rm -rf release
 	glu release
 
