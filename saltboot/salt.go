@@ -133,7 +133,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMinion.Domain = saltActionRequest.Master.Domain
 	}
 
-	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain)
+	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain, saltMinion.Address)
 	if err != nil {
 		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
 	}
@@ -227,7 +227,7 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMaster = saltActionRequest.Master
 	}
 
-	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain); err != nil {
+	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain, saltMaster.Address); err != nil {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
 	}
 

@@ -18,10 +18,6 @@ func init() {
 }
 
 func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
-	getIpv4Address := func() (string, error) {
-		return "10.0.0.1", nil
-	}
-
 	readFile = func(filename string) ([]byte, error) {
 		hostsFile := `
 127.0.0.1	localhost
@@ -43,7 +39,7 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", getIpv4Address)
+	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -57,10 +53,6 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 }
 
 func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
-	getIpv4Address := func() (string, error) {
-		return "10.0.0.1", nil
-	}
-
 	readFile = func(filename string) ([]byte, error) {
 		hostsFile := `
 127.0.0.1	localhost
@@ -83,7 +75,7 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", getIpv4Address)
+	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -98,10 +90,6 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 }
 
 func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
-	getIpv4Address := func() (string, error) {
-		return "10.0.0.1", nil
-	}
-
 	readFile = func(filename string) ([]byte, error) {
 		hostsFile := `
 127.0.0.1	localhost
@@ -125,7 +113,7 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", getIpv4Address)
+	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -141,10 +129,6 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 }
 
 func TestHostsFileWriteIpNotPresent(t *testing.T) {
-	getIpv4Address := func() (string, error) {
-		return "10.0.0.1", nil
-	}
-
 	readFile = func(filename string) ([]byte, error) {
 		hostsFile := `
 127.0.0.1	localhost
@@ -167,7 +151,7 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", getIpv4Address)
+	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -183,10 +167,6 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 }
 
 func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
-	getIpv4Address := func() (string, error) {
-		return "10.0.0.1", nil
-	}
-
 	readFile = func(filename string) ([]byte, error) {
 		hostsFile := `
 127.0.0.1	localhost
@@ -210,7 +190,7 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".compute.internal", "hosts", getIpv4Address)
+	updateHostsFile("hostname-1", ".compute.internal", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost

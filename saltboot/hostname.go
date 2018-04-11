@@ -15,10 +15,6 @@ const HOSTNAME_FILE = "/etc/hostname"
 var readFile = ioutil.ReadFile
 var writeFile = ioutil.WriteFile
 
-func getIpv4Address() (string, error) {
-	return ExecCmd("hostname", "-I")
-}
-
 func getFQDN() (string, error) {
 	return ExecCmd("hostname", "-f")
 }
@@ -41,7 +37,7 @@ func setHostname(hostName string) (string, error) {
 }
 
 // This is required due to: https://github.com/saltstack/salt/issues/32719
-func ensureHostIsResolvable(customHostname *string, customDomain string) error {
+func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4address string) error {
 	var hostName string
 	if customHostname != nil && len(*customHostname) > 0 {
 		log.Printf("[ensureHostIsResolvable] use custom hostname: %s", *customHostname)
@@ -73,7 +69,7 @@ func ensureHostIsResolvable(customHostname *string, customDomain string) error {
 		domain = "." + domain
 	}
 
-	if err := updateHostsFile(hostName, domain, HOSTS_FILE, getIpv4Address); err != nil {
+	if err := updateHostsFile(hostName, domain, HOSTS_FILE, ipv4address); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
 		return err
 	}
@@ -92,13 +88,8 @@ func ensureHostIsResolvable(customHostname *string, customDomain string) error {
 	return nil
 }
 
-func updateHostsFile(hostName string, domain string, file string, getIpv4Address func() (string, error)) error {
-	ip, err := getIpv4Address()
-	if err != nil {
-		return err
-	}
-
-	log.Printf("[updateHostsFile] hostName: %s, domain: %s, ip: %s", hostName, domain, ip)
+func updateHostsFile(hostName string, domain string, file string, ipv4address string) error {
+	log.Printf("[updateHostsFile] hostName: %s, domain: %s, ip: %s", hostName, domain, ipv4address)
 	b, err := readFile(file)
 	if err != nil {
 		return err
@@ -106,13 +97,13 @@ func updateHostsFile(hostName string, domain string, file string, getIpv4Address
 	hostsFile := string(b)
 	log.Printf("[updateHostsFile] original hosts file: %s", hostsFile)
 
-	ipv4HostString := ip + " " + hostName + domain + " " + hostName
+	ipv4HostString := ipv4address + " " + hostName + domain + " " + hostName
 	log.Printf("[updateHostsFile] ipv4HostString: %s", ipv4HostString)
 
 	lines := strings.Split(hostsFile, "\n")
 	var filteredLines = make([]string, 0)
 	for _, line := range lines {
-		if !strings.Contains(line, ip) {
+		if !strings.Contains(line, ipv4address) {
 			filteredLines = append(filteredLines, line)
 		}
 	}

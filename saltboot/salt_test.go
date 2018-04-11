@@ -111,7 +111,6 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	checkExecutedCommands([]string{
 		"hostname -s",
 		"hostname -d",
-		"hostname -I",
 		"hostname ",
 		"grep SUSE /etc/issue",
 		"ps aux",
@@ -165,7 +164,6 @@ func TestSaltServerRunRequestHandler(t *testing.T) {
 	checkExecutedCommands([]string{
 		"hostname -s",
 		"hostname -d",
-		"hostname -I",
 		"hostname ",
 		"grep SUSE /etc/issue",
 		"grep saltuser /etc/passwd",
