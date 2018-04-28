@@ -13,9 +13,6 @@ import (
 
 const (
 	SALT_USER = "saltuser"
-	UBUNTU    = "Ubuntu"
-	DEBIAN    = "Debian"
-	SUSE      = "SUSE"
 )
 
 func init() {
@@ -31,7 +28,7 @@ func randStringRunes(n int) string {
 	return string(b)
 }
 
-func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
+func CreateUser(saltMaster SaltMaster, os *Os) (resp model.Response, err error) {
 	log.Printf("[CreateUser] execute salt run request")
 
 	result := "Create user: OK"
@@ -52,7 +49,7 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 			return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 		}
 
-		if shouldUseUserAdd() {
+		if shouldUseUserAdd(os) {
 			result, err = ExecCmd("groupadd", "-r", "wheel")
 			if err != nil && strings.Contains(err.Error(), "exit status 9") {
 				log.Printf("[CreateUser] ignore group exists error: %s", err.Error())
@@ -77,15 +74,6 @@ func CreateUser(saltMaster SaltMaster) (resp model.Response, err error) {
 	return resp, nil
 }
 
-func shouldUseUserAdd() bool {
-	return isOs(UBUNTU) || isOs(DEBIAN) || isOs(SUSE)
-}
-
-func isOs(os string) bool {
-	out, _ := ExecCmd("grep", os, "/etc/issue")
-	if len(out) > 0 {
-		log.Printf("[CreateUser] host OS is determined to be %s", os)
-		return true
-	}
-	return false
+func shouldUseUserAdd(os *Os) bool {
+	return isOs(os, UBUNTU) || isOs(os, DEBIAN) || isOs(os, SUSE, SLES12)
 }
