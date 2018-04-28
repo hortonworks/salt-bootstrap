@@ -20,6 +20,16 @@ type SaltActionRequest struct {
 	Masters []SaltMaster `json:"masters,omitempty"`
 	Minions []SaltMinion `json:"minions,omitempty"`
 	Action  string       `json:"action"`
+	Cloud   *Cloud       `json:"cloud"`
+	OS      *Os          `json:"os"`
+}
+
+type Cloud struct {
+	Name string
+}
+
+type Os struct {
+	Name string
 }
 
 type SaltAuth struct {
@@ -133,9 +143,12 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMinion.Domain = saltActionRequest.Master.Domain
 	}
 
-	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain, saltMinion.Address)
+	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain, saltMinion.Address, saltActionRequest.OS, saltActionRequest.Cloud)
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
+		log.Printf("[SaltMinionRunRequestHandler] [ERROR] unable to set the fqdn: %s", err.Error())
+		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+		resp.WriteHttp(w)
+		return
 	}
 
 	baseDir := req.Header.Get("salt-minion-base-dir")
@@ -227,13 +240,18 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMaster = saltActionRequest.Master
 	}
 
-	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain, saltMaster.Address); err != nil {
-		log.Printf("[SaltServerRunRequestHandler] [ERROR] while hostfile update: %s", err.Error())
+	var resp model.Response
+
+	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain, saltMaster.Address, saltActionRequest.OS, saltActionRequest.Cloud); err != nil {
+		log.Printf("[SaltServerRunRequestHandler] [ERROR] unable to set the fqdn: %s", err.Error())
+		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+		resp.WriteHttp(w)
+		return
 	}
 
 	var responses []model.Response
 
-	resp, err := CreateUser(saltMaster)
+	resp, err = CreateUser(saltMaster, saltActionRequest.OS)
 	if err != nil {
 		resp.WriteHttp(w)
 		return
