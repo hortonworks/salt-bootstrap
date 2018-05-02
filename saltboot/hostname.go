@@ -1,6 +1,7 @@
 package saltboot
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -37,7 +38,7 @@ func setHostname(hostName string) (string, error) {
 }
 
 // This is required due to: https://github.com/saltstack/salt/issues/32719
-func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4address string) error {
+func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4address string, os *Os, cloud *Cloud) error {
 	var hostName string
 	if customHostname != nil && len(*customHostname) > 0 {
 		log.Printf("[ensureHostIsResolvable] use custom hostname: %s", *customHostname)
@@ -57,8 +58,18 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 		domain = customDomain
 	} else {
 		if defaultDomain, domainError := getDomain(); domainError != nil || len(defaultDomain) == 0 {
-			log.Printf("[ensureHostIsResolvable] default domain is not available, use: %s", EXAMPLE_DOMAIN)
-			domain = EXAMPLE_DOMAIN
+			log.Printf("[ensureHostIsResolvable] default domain is not available")
+			if isCloud(AZURE, cloud) {
+				log.Printf("[ensureHostIsResolvable] cloud type is '%s', default domain is expected", cloud.Name)
+				if domainError != nil {
+					return domainError
+				} else {
+					return errors.New("it is expected to have a default domain, but it is empty")
+				}
+			} else {
+				log.Printf("[ensureHostIsResolvable] use '%s' as default domain", EXAMPLE_DOMAIN)
+				domain = EXAMPLE_DOMAIN
+			}
 		} else {
 			log.Printf("[ensureHostIsResolvable] use default domain: %s", defaultDomain)
 			domain = defaultDomain
@@ -71,19 +82,16 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 
 	if err := updateHostsFile(hostName, domain, HOSTS_FILE, ipv4address); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
-		return err
 	}
 	networkSysConfig := NETWORK_SYSCONFIG_FILE
-	if isOs(SUSE) {
+	if isOs(os, SUSE, SLES12) {
 		networkSysConfig = NETWORK_SYSCONFIG_FILE_SUSE
 	}
 	if err := updateSysConfig(hostName, domain, networkSysConfig); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update sys config: %s", err.Error())
-		return err
 	}
 	if err := updateHostNameFile(hostName, HOSTNAME_FILE); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host name: %s", err.Error())
-		return err
 	}
 	return nil
 }
