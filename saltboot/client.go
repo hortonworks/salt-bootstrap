@@ -2,10 +2,9 @@ package saltboot
 
 import (
 	"encoding/json"
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"log"
 	"net/http"
-
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 type Clients struct {
