@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/hortonworks/salt-bootstrap.svg?style=shield)](https://circleci.com/gh/hortonworks/salt-bootstrap) [![Go Report Card](https://goreportcard.com/badge/github.com/hortonworks/salt-bootstrap)](https://goreportcard.com/report/github.com/hortonworks/salt-bootstrap)
+
 # Salt Bootstrap
 
 SaltStack is a configuration management software which delivers fast & scalable event-driven infrastructure automated. But how you configure SaltStack itself if your cluster infrastructure created dynamically by automatized tools. That's where Salt Bootstrap comes in picture.
