@@ -3,7 +3,7 @@ BINARY=salt-bootstrap
 VERSION=0.13.0
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/hortonworks/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/hortonworks/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
-GOFILES = $(shell find . -type f -name '*.go')
+GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.git/*")
 
 
 deps: deps-errcheck
@@ -18,8 +18,11 @@ clean:
 
 all: build
 	
+formatcheck:
+	([ -z "$(shell gofmt -d $(GOFILES_NOVENDOR))" ]) || (echo "Source is unformatted"; exit 1)
+
 format:
-	@gofmt -w ${GOFILES}
+	@gofmt -w ${GOFILES_NOVENDOR}
 
 vet:
 	go vet ./...
@@ -30,7 +33,7 @@ test:
 errcheck:
 	errcheck -ignoretests ./...
 
-build: errcheck format vet test build-darwin build-linux
+build: formatcheck vet test build-darwin build-linux
 
 build-docker:
 	@#USER_NS='-u $(shell id -u $(whoami)):$(shell id -g $(whoami))'

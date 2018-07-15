@@ -47,8 +47,7 @@ func IsServiceRunning(service string) (bool, string) {
 func SetServiceState(service string, serviceAction string) (resp model.Response, err error) {
 	initSystem := GetInitSystem()
 	action := initSystem.ActionCommand(service, serviceAction)
-	result, err := ExecCmd(action[0], action[1:len(action)]...)
-	if err != nil {
+	if _, err := ExecCmd(action[0], action[1:]...); err != nil {
 		return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 	}
 	var state []string
@@ -57,7 +56,7 @@ func SetServiceState(service string, serviceAction string) (resp model.Response,
 	} else {
 		state = initSystem.StateCommand(service, true)
 	}
-	result, err = ExecCmd(state[0], state[1:len(state)]...)
+	result, err := ExecCmd(state[0], state[1:]...)
 	if err != nil {
 		return model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}, err
 	}

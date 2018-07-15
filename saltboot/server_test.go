@@ -21,7 +21,7 @@ func TestWriteToFile(t *testing.T) {
 	_, err := servers.WriteToFile()
 
 	if err != nil {
-		t.Errorf("error occured during write %s", err)
+		t.Errorf("error occurred during write %s", err)
 	}
 
 	expected := "\naddress name\naddress2 name2"

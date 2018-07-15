@@ -162,14 +162,14 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	var masterConf []byte
 	servers := saltMinion.Servers
-	restartNeeded := false
+	var restartNeeded bool
 	if servers != nil && len(servers) > 0 {
 		log.Printf("[SaltMinionRunRequestHandler] salt master list: %s", servers)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": servers})
 		restartNeeded = isSaltMinionRestartNeeded(servers)
 	} else {
 		log.Printf("[SaltMinionRunRequestHandler] salt master (depricated): %s", saltMinion.Server)
-		masterConf, _ = yaml.Marshal(map[string][]string{"master": []string{saltMinion.Server}})
+		masterConf, _ = yaml.Marshal(map[string][]string{"master": {saltMinion.Server}})
 		restartNeeded = isSaltMinionRestartNeeded([]string{saltMinion.Server})
 	}
 
@@ -335,8 +335,8 @@ func SaltPillarRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if strings.Contains(saltPillar.Path, "..") {
-		log.Printf("[SaltPillarRequestHandler] [ERROR] path cannot contain '..' charachters %s", saltPillar.Path)
-		model.Response{Status: "path cannot contain '..' charachters"}.WriteBadRequestHttp(w)
+		log.Printf("[SaltPillarRequestHandler] [ERROR] path cannot contain '..' characters %s", saltPillar.Path)
+		model.Response{Status: "path cannot contain '..' characters"}.WriteBadRequestHttp(w)
 		return
 	}
 

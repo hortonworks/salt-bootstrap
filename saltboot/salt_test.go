@@ -95,7 +95,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 		content, _ := ioutil.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
 		var masters map[string][]string
 		yaml.Unmarshal(content, &masters)
-		expected := map[string][]string{"master": []string{"server"}}
+		expected := map[string][]string{"master": {"server"}}
 		if masters["master"][0] != expected["master"][0] {
 			t.Errorf("master config not match %s == %s", expected, string(content))
 		}
@@ -214,7 +214,7 @@ func TestWritePillar(t *testing.T) {
 	_, err := writePillarImpl(pillar, tempDirName)
 
 	if err != nil {
-		t.Errorf("error occured during write %s", err)
+		t.Errorf("error occurred during write %s", err)
 	}
 
 	expected := "key: value\n"
