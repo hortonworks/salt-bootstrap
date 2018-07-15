@@ -9,23 +9,25 @@ import (
 )
 
 const (
-	RootPath               = "/saltboot"
-	HealthEP               = RootPath + "/health"
-	ServerSaveEP           = RootPath + "/server/save"
-	ServerDistributeEP     = RootPath + "/server/distribute"
-	SaltActionDistributeEP = RootPath + "/salt/action/distribute"
-	SaltMinionEp           = RootPath + "/salt/minion"
-	SaltServerEp           = RootPath + "/salt/server"
-	SaltMinionRunEP        = SaltMinionEp + "/run"
-	SaltMinionStopEP       = SaltMinionEp + "/stop"
-	SaltServerRunEP        = SaltServerEp + "/run"
-	SaltServerStopEP       = SaltServerEp + "/stop"
-	SaltPillarEP           = RootPath + "/salt/server/pillar"
-	SaltPillarDistributeEP = SaltPillarEP + "/distribute"
-	HostnameDistributeEP   = RootPath + "/hostname/distribute"
-	HostnameEP             = RootPath + "/hostname"
-	UploadEP               = RootPath + "/file"
-	FileDistributeEP       = UploadEP + "/distribute"
+	RootPath                    = "/saltboot"
+	HealthEP                    = RootPath + "/health"
+	ServerSaveEP                = RootPath + "/server/save"
+	ServerDistributeEP          = RootPath + "/server/distribute"
+	SaltActionDistributeEP      = RootPath + "/salt/action/distribute"
+	SaltMinionEp                = RootPath + "/salt/minion"
+	SaltServerEp                = RootPath + "/salt/server"
+	SaltMinionRunEP             = SaltMinionEp + "/run"
+	SaltMinionStopEP            = SaltMinionEp + "/stop"
+	SaltServerRunEP             = SaltServerEp + "/run"
+	SaltServerStopEP            = SaltServerEp + "/stop"
+	SaltPillarEP                = RootPath + "/salt/server/pillar"
+	SaltPillarDistributeEP      = SaltPillarEP + "/distribute"
+	HostnameDistributeEP        = RootPath + "/hostname/distribute"
+	HostnameEP                  = RootPath + "/hostname"
+	UploadEP                    = RootPath + "/file"
+	FileDistributeEP            = UploadEP + "/distribute"
+	PackageVersionsEP           = RootPath + "/packageVersions"
+	PackageVersionsDistributeEp = PackageVersionsEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -53,6 +55,8 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, SIGNED)).Methods("POST")
 	r.Handle(FileDistributeEP, authenticator.Wrap(FileUploadDistributeHandler, SIGNED)).Methods("POST")
 
+	r.Handle(PackageVersionsEP, authenticator.Wrap(HandlePackageVersionsRequest, OPEN)).Methods("POST")
+	r.Handle(PackageVersionsDistributeEp, authenticator.Wrap(DistributePackageVersionsRequest, OPEN)).Methods("POST")
 	log.Printf("[web] starting server at: %s", address)
 	http.Handle("/", r)
 	if err := http.ListenAndServe(address, nil); err != nil {

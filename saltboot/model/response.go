@@ -9,11 +9,12 @@ import (
 )
 
 type Response struct {
-	Status     string `json:"status"`
-	ErrorText  string `json:"errorText,omitempty"`
-	Address    string `json:"address,omitempty"`
-	StatusCode int    `json:"statusCode,omitempty"`
-	Version    string `json:"version,omitempty"`
+	Status     string      `json:"status"`
+	ErrorText  string      `json:"errorText,omitempty"`
+	Address    string      `json:"address,omitempty"`
+	StatusCode int         `json:"statusCode,omitempty"`
+	Version    string      `json:"version,omitempty"`
+	Parameters interface{} `json:"params,omitempty"`
 }
 
 type Responses struct {
