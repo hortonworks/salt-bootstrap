@@ -1,17 +1,28 @@
 version: 2
 jobs:
   build:
-    machine:
-      services:
-        - docker
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.10.3
+    working_directory: /go/src/github.com/hortonworks/salt-bootstrap
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - pkg-cache
       - run:
-          name: build
-          command: make build-docker
-
-workflows:
-  version: 2
-  build_and_test:
-    jobs:
-      - build
+          name: Downloading dependencies
+          command: make deps-errcheck
+      - run:
+          name: Analyzing code
+          command: make _check
+      - run:
+          name: Run unit tests
+          command: make test
+      - run:
+          name: "Building binaries"
+          command: make _build
+      - save_cache:
+          key: pkg-cache
+          paths:
+            - "/go/pkg"

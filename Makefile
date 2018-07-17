@@ -18,6 +18,8 @@ clean:
 
 all: build
 	
+_check: errcheck formatcheck vet
+
 formatcheck:
 	([ -z "$(shell gofmt -d $(GOFILES_NOVENDOR))" ]) || (echo "Source is unformatted"; exit 1)
 
@@ -28,12 +30,14 @@ vet:
 	go vet ./...
 
 test:
-	go test -timeout 30s -coverprofile coverage -race ./...
+	go test -timeout 30s -coverprofile coverage -race $$(go list ./... | grep -v /vendor/)
 
 errcheck:
 	errcheck -ignoretests -exclude errcheck.exclude  ./...
 
-build: errcheck formatcheck vet test build-darwin build-linux
+_build: build-darwin build-linux
+
+build: _check test _build
 
 build-docker:
 	@#USER_NS='-u $(shell id -u $(whoami)):$(shell id -g $(whoami))'
