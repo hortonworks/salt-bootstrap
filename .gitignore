@@ -17,5 +17,5 @@ saltboot.test
 *.a
 *.so
 
-
+coverage
 salt-bootstrap
