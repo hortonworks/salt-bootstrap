@@ -35,7 +35,7 @@ test:
 errcheck:
 	errcheck -ignoretests -exclude errcheck.exclude  ./...
 
-_build: build-darwin build-linux build-ppc
+_build: build-darwin build-linux build-ppc64le
 
 build: _check test _build
 
@@ -49,8 +49,8 @@ build-darwin:
 build-linux:
 	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux/${BINARY} main.go
 
-build-ppc:
-	GOOS=linux GOARCH=ppc64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux-ppc64/${BINARY} main.go
+build-ppc64le:
+	GOOS=linux GOARCH=ppc64le go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux-ppc64le/${BINARY} main.go
 
 release: build-docker
 	rm -rf release
