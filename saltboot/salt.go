@@ -307,7 +307,7 @@ func writePillarImpl(pillar SaltPillar, basePath string) (outStr string, err err
 
 	jsonDef := []byte("#!json\n")
 	jsn, _ := json.MarshalIndent(pillar.Json, "", "\t")
-	err = ioutil.WriteFile(file, append(jsonDef,jsn...), 0644)
+	err = ioutil.WriteFile(file, append(jsonDef, jsn...), 0644)
 	if err != nil {
 		return "Failed to write to " + file, err
 	}
