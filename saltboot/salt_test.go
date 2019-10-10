@@ -217,7 +217,7 @@ func TestWritePillar(t *testing.T) {
 		t.Errorf("error occurred during write %s", err)
 	}
 
-	expected := "key: value\n"
+	expected := "#!json\n{\n\t\"key\": \"value\"\n}"
 	content, _ := ioutil.ReadFile(tempDirName + "/srv/pillar" + pillar.Path)
 	if string(content) != expected {
 		t.Errorf("yml content not match %s == %s", expected, string(content))

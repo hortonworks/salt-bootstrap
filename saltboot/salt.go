@@ -305,8 +305,9 @@ func writePillarImpl(pillar SaltPillar, basePath string) (outStr string, err err
 		return "Failed to create dir " + dir, err
 	}
 
-	yml, _ := yaml.Marshal(pillar.Json)
-	err = ioutil.WriteFile(file, yml, 0644)
+	jsonDef := []byte("#!json\n")
+	jsn, _ := json.MarshalIndent(pillar.Json, "", "\t")
+	err = ioutil.WriteFile(file, append(jsonDef,jsn...), 0644)
 	if err != nil {
 		return "Failed to write to " + file, err
 	}
