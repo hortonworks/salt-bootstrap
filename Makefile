@@ -1,24 +1,21 @@
 BINARY=salt-bootstrap
 
-VERSION=0.13.0
+VERSION=0.13.1
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/hortonworks/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/hortonworks/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.git/*")
 
 
-deps: deps-errcheck
+deps:
 	go get github.com/gliderlabs/glu
 	go get -u github.com/golang/dep/cmd/dep
-
-deps-errcheck:
-	go get -u github.com/kisielk/errcheck
 
 clean:
 	rm -rf build
 
 all: build
 	
-_check: errcheck formatcheck vet
+_check: formatcheck vet
 
 formatcheck:
 	([ -z "$(shell gofmt -d $(GOFILES_NOVENDOR))" ]) || (echo "Source is unformatted"; exit 1)
@@ -32,16 +29,13 @@ vet:
 test:
 	go test -timeout 30s -coverprofile coverage -race $$(go list ./... | grep -v /vendor/)
 
-errcheck:
-	errcheck -ignoretests -exclude errcheck.exclude  ./...
-
 _build: build-darwin build-linux build-ppc64le
 
 build: _check test _build
 
 build-docker:
 	@#USER_NS='-u $(shell id -u $(whoami)):$(shell id -g $(whoami))'
-	docker run --rm ${USER_NS} -v "${PWD}":/go/src/github.com/hortonworks/salt-bootstrap -w /go/src/github.com/hortonworks/salt-bootstrap -e VERSION=${VERSION} golang:1.9.2 make deps-errcheck build
+	docker run --rm ${USER_NS} -v "${PWD}":/go/src/github.com/hortonworks/salt-bootstrap -w /go/src/github.com/hortonworks/salt-bootstrap -e VERSION=${VERSION} golang:1.13.1 make build
 
 build-darwin:
 	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin/${BINARY} main.go
