@@ -150,6 +150,6 @@ func GetAuthUserPass(r *http.Request) (string, string) {
 	return pair[0], pair[1]
 }
 
-func GetSignatureAndSigned(r *http.Request) (string, string) {
-	return strings.TrimSpace(r.Header.Get(SIGNATURE)), r.Header.Get(SIGNED_CONTENT)
+func GetSignedRequestBody(r *http.Request) RequestBody {
+	return RequestBody{Signature: strings.TrimSpace(r.Header.Get(SIGNATURE)), SignedPayload: r.Header.Get(SIGNED_CONTENT)}
 }
