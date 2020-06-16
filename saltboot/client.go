@@ -17,11 +17,12 @@ type Clients struct {
 func (clients *Clients) DistributeAddress(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeAddress] Request: %s", clients)
 	jsonString, _ := json.Marshal(Servers{Servers: clients.Servers, Path: clients.Path})
-	return distributeImpl(Distribute, clients.Clients, jsonString, ServerSaveEP, user, pass)
+	return distributeImpl(DistributeRequest, clients.Clients, ServerSaveEP, user, pass, RequestBody{PlainPayload: jsonString})
 }
 
-func distributeImpl(distribute func(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response, c []string, json []byte, endpoint string, user string, pass string) (result []model.Response) {
-	responses := distribute(c, json, endpoint, user, pass)
+func distributeImpl(distribute func(clients []string, endpoint, user, pass string, requestBody RequestBody) <-chan model.Response,
+	c []string, endpoint string, user string, pass string, requestBody RequestBody) (result []model.Response) {
+	responses := distribute(c, endpoint, user, pass, requestBody)
 	for resp := range responses {
 		result = append(result, resp)
 	}
@@ -30,7 +31,7 @@ func distributeImpl(distribute func(clients []string, payload []byte, endpoint s
 
 func (clients *Clients) DistributeHostnameRequest(user string, pass string) (result []model.Response) {
 	log.Printf("[Clients.distributeHostnameRequest] Request: %s", clients)
-	return distributeImpl(Distribute, clients.Clients, nil, HostnameEP, user, pass)
+	return distributeImpl(DistributeRequest, clients.Clients, HostnameEP, user, pass, RequestBody{})
 }
 
 func ClientHostnameHandler(w http.ResponseWriter, req *http.Request) {

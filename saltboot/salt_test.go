@@ -13,7 +13,7 @@ import (
 )
 
 func TestDistributeActionImplWithoutMaster(t *testing.T) {
-	distributeRequest := func(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
+	distributeRequest := func(clients []string, endpoint string, user string, pass string, requestBody RequestBody) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -27,7 +27,7 @@ func TestDistributeActionImplWithoutMaster(t *testing.T) {
 		Minions: minions,
 	}
 
-	resp := distributeActionImpl(distributeRequest, request, "user", "pass", "", "")
+	resp := distributeActionImpl(distributeRequest, request, "user", "pass", RequestBody{})
 
 	if len(resp) != len(minions) {
 		t.Errorf("size not match %d == %d", len(minions), len(resp))
@@ -41,7 +41,7 @@ func TestDistributeActionImplWithoutMaster(t *testing.T) {
 }
 
 func TestDistributeActionImplMaster(t *testing.T) {
-	distributeRequest := func(clients []string, endpoint string, user string, pass string, signature string, signed string) <-chan model.Response {
+	distributeRequest := func(clients []string, endpoint string, user string, pass string, requestBody RequestBody) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -53,7 +53,7 @@ func TestDistributeActionImplMaster(t *testing.T) {
 		Master: SaltMaster{Address: "address"},
 	}
 
-	resp := distributeActionImpl(distributeRequest, request, "user", "pass", "", "")
+	resp := distributeActionImpl(distributeRequest, request, "user", "pass", RequestBody{})
 
 	if len(resp) != 1 {
 		t.Errorf("size not match %d == %d", 1, len(resp))

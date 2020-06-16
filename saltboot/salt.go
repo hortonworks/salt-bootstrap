@@ -36,6 +36,17 @@ type SaltAuth struct {
 	Password string `json:"password,omitempty"`
 }
 
+type RequestBody struct {
+	// plain request body
+	PlainPayload []byte
+
+	// signature key
+	Signature string
+
+	// request body signed with Signature
+	SignedPayload string
+}
+
 type SaltMaster struct {
 	Address  string   `json:"address"`
 	Auth     SaltAuth `json:"auth,omitempty"`
@@ -79,13 +90,13 @@ func (r SaltActionRequest) String() string {
 	return fmt.Sprintf(string(b))
 }
 
-func (r SaltActionRequest) distributeAction(user string, pass string, signature string, signed string) []model.Response {
+func (r SaltActionRequest) distributeAction(user string, pass string, signedRequestBody RequestBody) []model.Response {
 	log.Print("[distributeAction] distribute salt state command to targets")
-	return distributeActionImpl(DistributeRequest, r, user, pass, signature, signed)
+	return distributeActionImpl(DistributeRequest, r, user, pass, signedRequestBody)
 }
 
-func distributeActionImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response,
-	request SaltActionRequest, user string, pass string, signature string, signed string) (result []model.Response) {
+func distributeActionImpl(distributeActionRequest func([]string, string, string, string, RequestBody) <-chan model.Response,
+	request SaltActionRequest, user string, pass string, requestBody RequestBody) (result []model.Response) {
 	var targets []string
 	for _, minion := range request.Minions {
 		targets = append(targets, minion.Address)
@@ -93,7 +104,7 @@ func distributeActionImpl(distributeActionRequest func([]string, string, string,
 
 	action := strings.ToLower(request.Action)
 	log.Printf("[distributeActionImpl] send action request to minions: %s", targets)
-	for res := range distributeActionRequest(targets, SaltMinionEp+"/"+action, user, pass, signature, signed) {
+	for res := range distributeActionRequest(targets, SaltMinionEp+"/"+action, user, pass, requestBody) {
 		result = append(result, res)
 	}
 
@@ -103,12 +114,12 @@ func distributeActionImpl(distributeActionRequest func([]string, string, string,
 			masters = append(masters, master.Address)
 		}
 		log.Printf("[distributeActionImpl] send action request to masters: %s", masters)
-		for res := range distributeActionRequest(masters, SaltServerEp+"/"+action, user, pass, signature, signed) {
+		for res := range distributeActionRequest(masters, SaltServerEp+"/"+action, user, pass, requestBody) {
 			result = append(result, res)
 		}
 	} else if len(request.Master.Address) > 0 {
 		log.Printf("[distributeActionImpl] send action request to master: %s", request.Master.Address)
-		result = append(result, <-distributeActionRequest([]string{request.Master.Address}, SaltServerEp+"/"+action, user, pass, signature, signed))
+		result = append(result, <-distributeActionRequest([]string{request.Master.Address}, SaltServerEp+"/"+action, user, pass, requestBody))
 	}
 	return result
 }
@@ -364,8 +375,9 @@ func SaltActionDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	}
 
 	user, pass := GetAuthUserPass(req)
-	signature, signed := GetSignatureAndSigned(req)
-	result := saltActionRequest.distributeAction(user, pass, signature, signed)
+	signedRequestBody := GetSignedRequestBody(req)
+
+	result := saltActionRequest.distributeAction(user, pass, signedRequestBody)
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltActionDistributeRequestHandler] distribute salt state command request executed: %s", cResp.String())
 	if err := json.NewEncoder(w).Encode(cResp); err != nil {
@@ -386,10 +398,10 @@ func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	}
 
 	user, pass := GetAuthUserPass(req)
-	signature, signed := GetSignatureAndSigned(req)
+	signedRequestBody := GetSignedRequestBody(req)
 
 	log.Printf("[SaltPillarDistributeRequestHandler] send pillar save request to nodes: %s", saltPillar.Targets)
-	result := distributePillarImpl(DistributeRequest, saltPillar, user, pass, signature, signed)
+	result := distributePillarImpl(DistributeRequest, saltPillar, user, pass, signedRequestBody)
 
 	cResp := model.Responses{Responses: result}
 	log.Printf("[SaltPillarDistributeRequestHandler] distribute salt pillar request executed: %s", cResp.String())
@@ -398,9 +410,9 @@ func SaltPillarDistributeRequestHandler(w http.ResponseWriter, req *http.Request
 	}
 }
 
-func distributePillarImpl(distributeActionRequest func([]string, string, string, string, string, string) <-chan model.Response,
-	request SaltPillar, user string, pass string, signature string, signed string) (result []model.Response) {
-	for res := range distributeActionRequest(request.Targets, SaltPillarEP, user, pass, signature, signed) {
+func distributePillarImpl(distributeActionRequest func([]string, string, string, string, RequestBody) <-chan model.Response,
+	pillar SaltPillar, user string, pass string, requestBody RequestBody) (result []model.Response) {
+	for res := range distributeActionRequest(pillar.Targets, SaltPillarEP, user, pass, requestBody) {
 		result = append(result, res)
 	}
 	return result
@@ -410,7 +422,7 @@ func isGrainsConfigNeeded(grainConfigLocation string) bool {
 	log.Println("[isGrainsConfigNeeded] check whether salt grains are empty, config file: " + grainConfigLocation)
 	b, err := ioutil.ReadFile(grainConfigLocation)
 	if err == nil && len(b) > 0 {
-		var grains GrainConfig = GrainConfig{}
+		var grains = GrainConfig{}
 		if err := yaml.Unmarshal(b, &grains); err != nil {
 			log.Printf("[isGrainsConfigNeeded] [ERROR] failed to unmarshal grain config file: %s", err.Error())
 			return true
@@ -429,7 +441,7 @@ func isSaltMinionRestartNeeded(servers []string) bool {
 	masterConfFile := "/etc/salt/minion.d/master.conf"
 	b, err := ioutil.ReadFile(masterConfFile)
 	if err == nil && len(b) > 0 {
-		var saltMasterIps map[string][]string = make(map[string][]string)
+		var saltMasterIps = make(map[string][]string)
 		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
 			log.Printf("[isSaltMinionRestartNeeded] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
 			return false

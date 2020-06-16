@@ -10,7 +10,7 @@ import (
 )
 
 func TestDistributeAddressImpl(t *testing.T) {
-	f := func(clients []string, payload []byte, endpoint string, user string, pass string) <-chan model.Response {
+	f := func(clients []string, endpoint string, user string, pass string, requestBody RequestBody) <-chan model.Response {
 		c := make(chan model.Response, len(clients))
 		for _, client := range clients {
 			c <- model.Response{StatusCode: 200, ErrorText: "", Address: client}
@@ -19,7 +19,7 @@ func TestDistributeAddressImpl(t *testing.T) {
 		return c
 	}
 	clients := []string{"a", "b", "c"}
-	resp := distributeImpl(f, clients, make([]byte, 0), "/", "user", "pass")
+	resp := distributeImpl(f, clients, "/", "user", "pass", RequestBody{PlainPayload: make([]byte, 0)})
 
 	if len(resp) != len(clients) {
 		t.Errorf("length not match %d == %d", len(clients), len(resp))
