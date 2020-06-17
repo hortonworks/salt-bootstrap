@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.10.3
+      - image: circleci/golang:1.14.3
     working_directory: /go/src/github.com/hortonworks/salt-bootstrap
     steps:
       - checkout
@@ -12,7 +12,7 @@ jobs:
             - pkg-cache
       - run:
           name: Downloading dependencies
-          command: make deps-errcheck
+          command: make deps
       - run:
           name: Analyzing code
           command: make _check

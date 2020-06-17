@@ -45,7 +45,7 @@ func (r FingerprintsResponse) String() string {
 func EncodeResponseJson(r FingerprintsResponse, w http.ResponseWriter) FingerprintsResponse {
 	err := json.NewEncoder(w).Encode(r)
 	if err != nil {
-		log.Printf("[writehttp] [ERROR] failed to create json from FingerprintsResponse: %s", err.Error())
+		log.Printf("[EncodeResponseJson] [ERROR] failed to create json from FingerprintsResponse: %s", err.Error())
 	}
 	return r
 }
@@ -145,7 +145,7 @@ func getMinionFingerprintFromSaltCall() (model.Response, error) {
 	}
 	fingerLines := strings.Split(out, "\n")
 	if len(fingerLines) != 2 {
-		log.Printf("[getMinionFingerprintFromSaltCall] unknown result from salt-call: %s", out)
+		log.Printf("[getMinionFingerprintFromSaltCall] unknown result returned from salt-call: %s", out)
 		return model.Response{}, errors.New("unknown result returned from salt-call")
 	}
 
@@ -157,11 +157,11 @@ func getMinionFingerprintFromSaltCall() (model.Response, error) {
 
 func getMinionFingerprintFromPrivateKey() model.Response {
 	keyLocation := MinionKey
-	log.Println("[getMinionFingerprintFromPrivateKey] get the public key of minion from private key: " + keyLocation)
+	log.Println("[getMinionFingerprintFromPrivateKey] generate the fingerprint from the minion's private key: " + keyLocation)
 
 	privateKeyText, err := ioutil.ReadFile(keyLocation)
 	if err != nil {
-		return createErrorResponse(fmt.Sprintf("Unable to load file %s", keyLocation), err)
+		return createErrorResponse(fmt.Sprintf("unable to load file %s", keyLocation), err)
 	}
 
 	privateKeyPem, _ := pem.Decode(privateKeyText)
@@ -171,12 +171,12 @@ func getMinionFingerprintFromPrivateKey() model.Response {
 
 	privateKeyDer, err := x509.ParsePKCS1PrivateKey(privateKeyPem.Bytes)
 	if err != nil {
-		return createErrorResponse("Cannot parse private key to DER format", err)
+		return createErrorResponse("cannot parse private key to DER format", err)
 	}
 
 	publicKeyDer, err := x509.MarshalPKIXPublicKey(&privateKeyDer.PublicKey)
 	if err != nil {
-		return createErrorResponse("Cannot marshal to public key", err)
+		return createErrorResponse("cannot marshal to public key", err)
 	}
 
 	pubKeyBlock := pem.Block{
@@ -211,7 +211,7 @@ func getFingerprint(publicKey string) string {
 
 func createErrorResponse(message string, err error) model.Response {
 	errorMessage := fmt.Sprintf("%s, err: %s", message, err.Error())
-	log.Printf("[getMinionPublicKey] [ERROR] %s", message)
+	log.Printf("[getMinionFingerprintFromPrivateKey] [ERROR] %s", message)
 	return model.Response{
 		StatusCode: http.StatusInternalServerError,
 		ErrorText:  errorMessage,
