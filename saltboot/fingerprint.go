@@ -15,7 +15,10 @@ import (
 	"strings"
 )
 
-const MINION_KEY = "/etc/salt/pki/minion/minion.pem"
+const (
+	MinionKey    = "/etc/salt/pki/minion/minion.pem"
+	SaltLocation = "/opt/"
+)
 
 type FingerprintsRequest struct {
 	Minions []SaltMinion `json:"minions,omitempty"`
@@ -112,9 +115,49 @@ func distributeFingerprintImpl(distributeRequest func([]string, string, string, 
 	return result
 }
 
-func getMinionFingerprint() model.Response {
-	keyLocation := MINION_KEY
-	log.Println("[getMinionFingerprint] get the public key of minion from private key: " + keyLocation)
+func getMinionFingerprintFromSaltCall() (model.Response, error) {
+	log.Println("[getMinionFingerprintFromSaltCall] get minion fingerprint using salt-call")
+
+	saltLocation := SaltLocation
+	out, err := ExecCmd("find", saltLocation, "-name", "salt-call")
+	if err != nil {
+		log.Printf("[getMinionFingerprintFromSaltCall] cannot execute find command, err: %s", err.Error())
+		return model.Response{}, err
+	}
+
+	var saltCallLocation string
+	for _, findResult := range strings.Split(out, "\n") {
+		if strings.Contains(findResult, "salt-call") {
+			saltCallLocation = findResult
+			break
+		}
+	}
+	if len(saltCallLocation) == 0 {
+		log.Printf("[getMinionFingerprintFromSaltCall] cannot find salt-call executable at %s", saltLocation)
+		return model.Response{}, errors.New("cannot find salt-call executable")
+	}
+	log.Printf("[getMinionFingerprintFromSaltCall] found salt-call at %s", saltCallLocation)
+
+	out, err = ExecCmd(saltCallLocation, "-local", "key.finger")
+	if err != nil {
+		log.Printf("[getMinionFingerprintFromSaltCall] cannot execute salt-call command, err: %s", err.Error())
+		return model.Response{}, err
+	}
+	fingerLines := strings.Split(out, "\n")
+	if len(fingerLines) != 2 {
+		log.Printf("[getMinionFingerprintFromSaltCall] unknown result from salt-call: %s", out)
+		return model.Response{}, errors.New("unknown result returned from salt-call")
+	}
+
+	fingerprint := strings.Trim(fingerLines[1], " ")
+	log.Printf("[getMinionFingerprintFromSaltCall] fingerprint: %s", fingerprint)
+
+	return model.Response{Status: fingerprint}, nil
+}
+
+func getMinionFingerprintFromPrivateKey() model.Response {
+	keyLocation := MinionKey
+	log.Println("[getMinionFingerprintFromPrivateKey] get the public key of minion from private key: " + keyLocation)
 
 	privateKeyText, err := ioutil.ReadFile(keyLocation)
 	if err != nil {
@@ -142,10 +185,10 @@ func getMinionFingerprint() model.Response {
 	}
 
 	publicKeyPem := string(pem.EncodeToMemory(&pubKeyBlock))
-	log.Printf("[getMinionFingerprint] public key in PEM format \n%s", publicKeyPem)
+	log.Printf("[getMinionFingerprintFromPrivateKey] public key in PEM format \n%s", publicKeyPem)
 
 	fingerprint := getFingerprint(publicKeyPem)
-	log.Printf("[getMinionFingerprint] calculated fiingerprint: %s", fingerprint)
+	log.Printf("[getMinionFingerprintFromPrivateKey] calculated fiingerprint: %s", fingerprint)
 
 	return model.Response{Status: fingerprint}
 }
