@@ -9,23 +9,25 @@ import (
 )
 
 const (
-	RootPath               = "/saltboot"
-	HealthEP               = RootPath + "/health"
-	ServerSaveEP           = RootPath + "/server/save"
-	ServerDistributeEP     = RootPath + "/server/distribute"
-	SaltActionDistributeEP = RootPath + "/salt/action/distribute"
-	SaltMinionEp           = RootPath + "/salt/minion"
-	SaltServerEp           = RootPath + "/salt/server"
-	SaltMinionRunEP        = SaltMinionEp + "/run"
-	SaltMinionStopEP       = SaltMinionEp + "/stop"
-	SaltServerRunEP        = SaltServerEp + "/run"
-	SaltServerStopEP       = SaltServerEp + "/stop"
-	SaltPillarEP           = RootPath + "/salt/server/pillar"
-	SaltPillarDistributeEP = SaltPillarEP + "/distribute"
-	HostnameDistributeEP   = RootPath + "/hostname/distribute"
-	HostnameEP             = RootPath + "/hostname"
-	UploadEP               = RootPath + "/file"
-	FileDistributeEP       = UploadEP + "/distribute"
+	RootPath                  = "/saltboot"
+	HealthEP                  = RootPath + "/health"
+	ServerSaveEP              = RootPath + "/server/save"
+	ServerDistributeEP        = RootPath + "/server/distribute"
+	SaltActionDistributeEP    = RootPath + "/salt/action/distribute"
+	SaltMinionEp              = RootPath + "/salt/minion"
+	SaltMinionRunEP           = SaltMinionEp + "/run"
+	SaltMinionStopEP          = SaltMinionEp + "/stop"
+	SaltMinionKeyEP           = SaltMinionEp + "/fingerprint"
+	SaltMinionKeyDistributeEP = SaltMinionEp + "/fingerprint/distribute"
+	SaltServerEp              = RootPath + "/salt/server"
+	SaltServerRunEP           = SaltServerEp + "/run"
+	SaltServerStopEP          = SaltServerEp + "/stop"
+	SaltPillarEP              = RootPath + "/salt/server/pillar"
+	SaltPillarDistributeEP    = RootPath + "/salt/server/pillar/distribute"
+	HostnameDistributeEP      = RootPath + "/hostname/distribute"
+	HostnameEP                = RootPath + "/hostname"
+	UploadEP                  = RootPath + "/file"
+	FileDistributeEP          = UploadEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -40,10 +42,15 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(ServerDistributeEP, authenticator.Wrap(ClientDistributionHandler, SIGNED)).Methods("POST")
 
 	r.Handle(SaltActionDistributeEP, authenticator.Wrap(SaltActionDistributeRequestHandler, SIGNED)).Methods("POST")
+
 	r.Handle(SaltMinionRunEP, authenticator.Wrap(SaltMinionRunRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltMinionStopEP, authenticator.Wrap(SaltMinionStopRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltMinionKeyEP, authenticator.Wrap(SaltMinionKeyHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltMinionKeyDistributeEP, authenticator.Wrap(SaltMinionKeyDistributionHandler, SIGNED)).Methods("POST")
+
 	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, SIGNED)).Methods("POST")
+
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltPillarDistributeEP, authenticator.Wrap(SaltPillarDistributeRequestHandler, SIGNED)).Methods("POST")
 

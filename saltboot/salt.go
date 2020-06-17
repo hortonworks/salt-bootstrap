@@ -2,6 +2,7 @@ package saltboot
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -223,6 +224,41 @@ func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	resp, _ := StopService("salt-minion")
 	resp.WriteHttp(w)
+}
+
+func SaltMinionKeyHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("[SaltMinionRunRequestHandler] fetch the salt-minion's fingerprint")
+
+	fingerprint := getMinionFingerprint()
+	fingerprint.WriteHttp(w)
+}
+
+func SaltMinionKeyDistributionHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("[SaltMinionKeyDistributionHandler] distribute fetch salt-minion fingerprint request")
+
+	decoder := json.NewDecoder(req.Body)
+	var fingerprintsRequest FingerprintsRequest
+	err := decoder.Decode(&fingerprintsRequest)
+	if err != nil {
+		log.Printf("[SaltMinionKeyDistributionHandler] [ERROR] couldn't decode json: %s", err.Error())
+		FingerprintsResponse{}.WriteBadRequestHttp(w, err)
+		return
+	}
+	if len(fingerprintsRequest.Minions) == 0 {
+		log.Printf("[SaltMinionKeyDistributionHandler] [ERROR] no minions were specified in the request")
+		FingerprintsResponse{}.WriteBadRequestHttp(w, errors.New("no minions were specified in the request"))
+		return
+	}
+
+	user, pass := GetAuthUserPass(req)
+	signedRequestBody := GetSignedRequestBody(req)
+
+	result := fingerprintsRequest.distributeRequest(user, pass, signedRequestBody)
+	response := FingerprintsResponse{Fingerprints: result, StatusCode: 200}
+	log.Printf("[SaltMinionKeyDistributionHandler] distribute fingerprint request executed: %s", response.String())
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("[SaltMinionKeyDistributionHandler] [ERROR] couldn't encode json: %s", err.Error())
+	}
 }
 
 func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
