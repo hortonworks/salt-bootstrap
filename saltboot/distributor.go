@@ -36,11 +36,12 @@ func DistributeRequest(clients []string, endpoint, user, pass string, requestBod
 
 			var req *http.Request
 			if len(requestBody.Signature) > 0 {
-				log.Println("[distribute] Send signed request to clients")
-				req, _ = http.NewRequest("POST", "http://"+clientAddr+endpoint+"?index="+strconv.Itoa(index), bytes.NewBufferString(requestBody.SignedPayload))
+				indexString := strconv.Itoa(index)
+				log.Printf("[distribute] Send signed request to client: %s with index: %s", client, indexString)
+				req, _ = http.NewRequest("POST", "http://"+clientAddr+endpoint+"?index="+indexString, bytes.NewBufferString(requestBody.SignedPayload))
 				req.Header.Set(SIGNATURE, requestBody.Signature)
 			} else {
-				log.Println("[distribute] Send plain request to clients")
+				log.Printf("[distribute] Send plain request to client: %s", client)
 				req, _ = http.NewRequest("POST", "http://"+clientAddr+endpoint, bytes.NewBuffer(requestBody.PlainPayload))
 			}
 			req.Header.Set("Content-Type", "application/json")
