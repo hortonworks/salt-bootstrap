@@ -1,6 +1,7 @@
 package saltboot
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -193,7 +194,26 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	grainConfigPath := baseDir + "/etc/salt/grains"
+	prewarmedRolesPath := baseDir + "/etc/salt/prewarmed_roles"
 	if isGrainsConfigNeeded(grainConfigPath) {
+		// Check if prewarmed roles exist, and add them to the roles before generating the file
+		if shouldAppendPrewarmedRoles(prewarmedRolesPath) {
+			file, err := os.Open(prewarmedRolesPath)
+			if err != nil {
+				resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+				resp.WriteHttp(w)
+				return
+			}
+			defer file.Close()
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				s := strings.TrimSpace(scanner.Text())
+				if len(s) > 0 {
+					saltMinion.Roles = append(saltMinion.Roles, s)
+				}
+			}
+		}
+
 		grainConfig := GrainConfig{Roles: saltMinion.Roles, HostGroup: saltMinion.HostGroup}
 		grainYaml, err := yaml.Marshal(grainConfig)
 		if err != nil {
@@ -473,6 +493,16 @@ func isGrainsConfigNeeded(grainConfigLocation string) bool {
 		}
 	}
 	log.Println("[isGrainsConfigNeeded] there is no grain config present at the moment, config is required")
+	return true
+}
+
+func shouldAppendPrewarmedRoles(prewarmRoleLocation string) bool {
+	// Essentially a file exists check.
+	log.Println("[shouldAppendPrewarmedRoles] check whether prewarm roles exist, file location: " + prewarmRoleLocation)
+	_, err := os.Stat(prewarmRoleLocation)
+	if os.IsNotExist(err) {
+		return false
+	}
 	return true
 }
 
