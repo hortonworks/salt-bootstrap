@@ -57,13 +57,14 @@ type SaltMaster struct {
 }
 
 type SaltMinion struct {
-	Address   string   `json:"address"`
-	Roles     []string `json:"roles,omitempty"`
-	Server    string   `json:"server,omitempty"`
-	Servers   []string `json:"servers,omitempty"`
-	HostGroup string   `json:"hostGroup,omitempty"`
-	Hostname  *string  `json:"hostName,omitempty"`
-	Domain    string   `json:"domain,omitempty"`
+	Address       string   `json:"address"`
+	Roles         []string `json:"roles,omitempty"`
+	Server        string   `json:"server,omitempty"`
+	Servers       []string `json:"servers,omitempty"`
+	HostGroup     string   `json:"hostGroup,omitempty"`
+	Hostname      *string  `json:"hostName,omitempty"`
+	Domain        string   `json:"domain,omitempty"`
+	RestartNeeded *bool    `json:"restartNeeded,omitempty"`
 }
 
 type SaltPillar struct {
@@ -75,6 +76,10 @@ type SaltPillar struct {
 func (saltMinion SaltMinion) AsByteArray() []byte {
 	b, _ := json.Marshal(saltMinion)
 	return b
+}
+
+func (saltMinion SaltMinion) IsRestartNeeded() bool {
+	return saltMinion.RestartNeeded != nil && *saltMinion.RestartNeeded
 }
 
 func (saltMaster SaltMaster) AsByteArray() []byte {
@@ -176,14 +181,15 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	var masterConf []byte
 	servers := saltMinion.Servers
 	var restartNeeded bool
+	log.Printf("[SaltMinionRunRequestHandler] Restart needed flag on minion: %v", saltMinion.IsRestartNeeded())
 	if servers != nil && len(servers) > 0 {
 		log.Printf("[SaltMinionRunRequestHandler] salt master list: %s", servers)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": servers})
-		restartNeeded = isSaltMinionRestartNeeded(servers)
+		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterIpDiffers(servers)
 	} else {
 		log.Printf("[SaltMinionRunRequestHandler] salt master (depricated): %s", saltMinion.Server)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": {saltMinion.Server}})
-		restartNeeded = isSaltMinionRestartNeeded([]string{saltMinion.Server})
+		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterIpDiffers([]string{saltMinion.Server})
 	}
 
 	err = ioutil.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
@@ -506,18 +512,18 @@ func shouldAppendPrewarmedRoles(prewarmRoleLocation string) bool {
 	return true
 }
 
-func isSaltMinionRestartNeeded(servers []string) bool {
-	log.Println("[isSaltMinionRestartNeeded] check whether salt-minion requires restart")
+func isSaltMasterIpDiffers(servers []string) bool {
+	log.Println("[isSaltMasterIpDiffers] check whether salt-minion requires restart")
 	masterConfFile := "/etc/salt/minion.d/master.conf"
 	b, err := ioutil.ReadFile(masterConfFile)
 	if err == nil && len(b) > 0 {
 		var saltMasterIps = make(map[string][]string)
 		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
-			log.Printf("[isSaltMinionRestartNeeded] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
+			log.Printf("[isSaltMasterIpDiffers] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
 			return false
 		}
 		ipList := saltMasterIps["master"]
-		log.Printf("[isSaltMinionRestartNeeded] original master IP list: %s", ipList)
+		log.Printf("[isSaltMasterIpDiffers] original master IP list: %s", ipList)
 		for _, server := range servers {
 			newMaster := true
 			for _, ip := range ipList {
@@ -526,11 +532,11 @@ func isSaltMinionRestartNeeded(servers []string) bool {
 				}
 			}
 			if newMaster {
-				log.Printf("[isSaltMinionRestartNeeded] found new salt-master: %s, restart needed", server)
+				log.Printf("[isSaltMasterIpDiffers] found new salt-master: %s, restart needed", server)
 				return true
 			}
 		}
 	}
-	log.Println("[isSaltMinionRestartNeeded] there is no new salt-master")
+	log.Println("[isSaltMasterIpDiffers] there is no new salt-master")
 	return false
 }
