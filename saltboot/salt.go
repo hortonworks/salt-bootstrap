@@ -254,12 +254,7 @@ func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 func SaltMinionKeyHandler(w http.ResponseWriter, req *http.Request) {
 	log.Println("[SaltMinionKeyHandler] fetch the salt-minion's fingerprint")
-
-	fingerprint, err := getMinionFingerprintFromSaltCall()
-	if err != nil {
-		log.Println("[SaltMinionKeyHandler] fall back to calculate the fingerprint from the private key")
-		fingerprint = getMinionFingerprintFromPrivateKey()
-	}
+	fingerprint := getMinionFingerprintFromPrivateKey()
 	fingerprint.WriteHttp(w)
 }
 
