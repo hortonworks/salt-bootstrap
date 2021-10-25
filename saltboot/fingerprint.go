@@ -115,46 +115,6 @@ func distributeFingerprintImpl(distributeRequest func([]string, string, string, 
 	return result
 }
 
-func getMinionFingerprintFromSaltCall() (model.Response, error) {
-	log.Println("[getMinionFingerprintFromSaltCall] get minion fingerprint using salt-call")
-
-	saltLocation := SaltLocation
-	out, err := ExecCmd("find", saltLocation, "-name", "salt-call")
-	if err != nil {
-		log.Printf("[getMinionFingerprintFromSaltCall] cannot execute find command, err: %s", err.Error())
-		return model.Response{}, err
-	}
-
-	var saltCallLocation string
-	for _, findResult := range strings.Split(out, "\n") {
-		if strings.Contains(findResult, "salt-call") {
-			saltCallLocation = findResult
-			break
-		}
-	}
-	if len(saltCallLocation) == 0 {
-		log.Printf("[getMinionFingerprintFromSaltCall] cannot find salt-call executable at %s", saltLocation)
-		return model.Response{}, errors.New("cannot find salt-call executable")
-	}
-	log.Printf("[getMinionFingerprintFromSaltCall] found salt-call at %s", saltCallLocation)
-
-	out, err = ExecCmd(saltCallLocation, "-local", "key.finger")
-	if err != nil {
-		log.Printf("[getMinionFingerprintFromSaltCall] cannot execute salt-call command, err: %s", err.Error())
-		return model.Response{}, err
-	}
-	fingerLines := strings.Split(out, "\n")
-	if len(fingerLines) != 2 {
-		log.Printf("[getMinionFingerprintFromSaltCall] unknown result returned from salt-call: %s", out)
-		return model.Response{}, errors.New("unknown result returned from salt-call")
-	}
-
-	fingerprint := strings.Trim(fingerLines[1], " ")
-	log.Printf("[getMinionFingerprintFromSaltCall] fingerprint: %s", fingerprint)
-
-	return model.Response{Status: fingerprint}, nil
-}
-
 func getMinionFingerprintFromPrivateKey() model.Response {
 	keyLocation := MinionKey
 	log.Println("[getMinionFingerprintFromPrivateKey] generate the fingerprint from the minion's private key: " + keyLocation)
