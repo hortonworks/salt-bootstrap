@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/hortonworks/salt-bootstrap.svg?style=shield)](https://circleci.com/gh/hortonworks/salt-bootstrap) [![Go Report Card](https://goreportcard.com/badge/github.com/hortonworks/salt-bootstrap)](https://goreportcard.com/report/github.com/hortonworks/salt-bootstrap)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hortonworks/salt-bootstrap)](https://goreportcard.com/report/github.com/hortonworks/salt-bootstrap)
 
 # Salt Bootstrap
 
