@@ -5,9 +5,21 @@ BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/hortonworks/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/hortonworks/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.git/*")
 
-
 deps:
-	go get github.com/gliderlabs/glu
+ifeq (, $(shell which gh))
+ifeq ($(shell uname),Linux)
+	apt-get update
+	apt-get -y install software-properties-common
+	apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+	apt-add-repository https://cli.github.com/packages
+	apt update
+	apt -y install gh
+endif
+ifeq ($(shell uname),Darwin)
+	brew install gh
+endif
+	gh auth login
+endif
 	go get -u github.com/golang/dep/cmd/dep
 
 clean:
@@ -48,7 +60,7 @@ build-ppc64le:
 
 release: build-docker
 	rm -rf release
-	glu release
+	VERSION=${VERSION} BINARY=${BINARY} ./release.sh
 
 docker_env_up:
 	docker-compose -f docker/docker-compose.yml up -d
