@@ -297,19 +297,10 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	index, err := strconv.Atoi(req.URL.Query().Get("index"))
+	saltMaster, err := getSaltMaster(saltActionRequest, req)
 	if err != nil {
-		log.Printf("[SaltMinionRunRequestHandler] [ERROR] missing index: %s", err.Error())
 		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
 		return
-	}
-
-	var saltMaster SaltMaster
-	masters := saltActionRequest.Masters
-	if masters != nil && len(masters) > 0 {
-		saltMaster = masters[index]
-	} else {
-		saltMaster = saltActionRequest.Master
 	}
 
 	var resp model.Response
@@ -323,7 +314,7 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	var responses []model.Response
 
-	resp, err = CreateUser(saltMaster, saltActionRequest.OS)
+	resp, err = CreateUser(*saltMaster, saltActionRequest.OS)
 	if err != nil {
 		resp.WriteHttp(w)
 		return
@@ -361,6 +352,47 @@ func SaltServerStopRequestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	resp, _ = StopService("salt-api")
 	resp.WriteHttp(w)
+}
+
+func SaltServerChangePasswordHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("[SaltServerChangePasswordHandler] execute salt master change password request")
+
+	decoder := json.NewDecoder(req.Body)
+	var saltActionRequest SaltActionRequest
+	if err := decoder.Decode(&saltActionRequest); err != nil {
+		log.Printf("[SaltServerChangePasswordHandler] [ERROR] couldn't decode json: %s", err.Error())
+		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		return
+	}
+
+	saltMaster, err := getSaltMaster(saltActionRequest, req)
+	if err != nil {
+		model.Response{Status: err.Error()}.WriteBadRequestHttp(w)
+		return
+	}
+
+	resp, err := ChangeUserPassword(*saltMaster)
+	if err != nil {
+		log.Printf("[SaltServerChangePasswordHandler] [ERROR] Failed to change password: %s", err.Error())
+	}
+	resp.WriteHttp(w)
+}
+
+func getSaltMaster(saltActionRequest SaltActionRequest, req *http.Request) (*SaltMaster, error) {
+	index, err := strconv.Atoi(req.URL.Query().Get("index"))
+	if err != nil {
+		log.Printf("[getSaltMaster] [ERROR] missing index: %s", err.Error())
+		return nil, err
+	}
+
+	var saltMaster SaltMaster
+	masters := saltActionRequest.Masters
+	if masters != nil && len(masters) > 0 {
+		saltMaster = masters[index]
+	} else {
+		saltMaster = saltActionRequest.Master
+	}
+	return &saltMaster, nil
 }
 
 func (pillar SaltPillar) WritePillar() (outStr string, err error) {

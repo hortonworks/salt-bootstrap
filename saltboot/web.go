@@ -9,25 +9,26 @@ import (
 )
 
 const (
-	RootPath                  = "/saltboot"
-	HealthEP                  = RootPath + "/health"
-	ServerSaveEP              = RootPath + "/server/save"
-	ServerDistributeEP        = RootPath + "/server/distribute"
-	SaltActionDistributeEP    = RootPath + "/salt/action/distribute"
-	SaltMinionEp              = RootPath + "/salt/minion"
-	SaltMinionRunEP           = SaltMinionEp + "/run"
-	SaltMinionStopEP          = SaltMinionEp + "/stop"
-	SaltMinionKeyEP           = SaltMinionEp + "/fingerprint"
-	SaltMinionKeyDistributeEP = SaltMinionEp + "/fingerprint/distribute"
-	SaltServerEp              = RootPath + "/salt/server"
-	SaltServerRunEP           = SaltServerEp + "/run"
-	SaltServerStopEP          = SaltServerEp + "/stop"
-	SaltPillarEP              = RootPath + "/salt/server/pillar"
-	SaltPillarDistributeEP    = RootPath + "/salt/server/pillar/distribute"
-	HostnameDistributeEP      = RootPath + "/hostname/distribute"
-	HostnameEP                = RootPath + "/hostname"
-	UploadEP                  = RootPath + "/file"
-	FileDistributeEP          = UploadEP + "/distribute"
+	RootPath                   = "/saltboot"
+	HealthEP                   = RootPath + "/health"
+	ServerSaveEP               = RootPath + "/server/save"
+	ServerDistributeEP         = RootPath + "/server/distribute"
+	SaltActionDistributeEP     = RootPath + "/salt/action/distribute"
+	SaltMinionEp               = RootPath + "/salt/minion"
+	SaltMinionRunEP            = SaltMinionEp + "/run"
+	SaltMinionStopEP           = SaltMinionEp + "/stop"
+	SaltMinionKeyEP            = SaltMinionEp + "/fingerprint"
+	SaltMinionKeyDistributeEP  = SaltMinionEp + "/fingerprint/distribute"
+	SaltServerEp               = RootPath + "/salt/server"
+	SaltServerRunEP            = SaltServerEp + "/run"
+	SaltServerStopEP           = SaltServerEp + "/stop"
+	SaltServerChangePasswordEP = SaltServerEp + "/change-password"
+	SaltPillarEP               = RootPath + "/salt/server/pillar"
+	SaltPillarDistributeEP     = RootPath + "/salt/server/pillar/distribute"
+	HostnameDistributeEP       = RootPath + "/hostname/distribute"
+	HostnameEP                 = RootPath + "/hostname"
+	UploadEP                   = RootPath + "/file"
+	FileDistributeEP           = UploadEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
@@ -50,6 +51,7 @@ func NewCloudbreakBootstrapWeb() {
 
 	r.Handle(SaltServerRunEP, authenticator.Wrap(SaltServerRunRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltServerStopEP, authenticator.Wrap(SaltServerStopRequestHandler, SIGNED)).Methods("POST")
+	r.Handle(SaltServerChangePasswordEP, authenticator.Wrap(SaltServerChangePasswordHandler, SIGNED)).Methods("POST")
 
 	r.Handle(SaltPillarEP, authenticator.Wrap(SaltPillarRequestHandler, SIGNED)).Methods("POST")
 	r.Handle(SaltPillarDistributeEP, authenticator.Wrap(SaltPillarDistributeRequestHandler, SIGNED)).Methods("POST")
