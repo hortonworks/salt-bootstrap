@@ -41,7 +41,7 @@ vet:
 test:
 	go test -timeout 30s -coverprofile coverage -race $$(go list ./... | grep -v /vendor/)
 
-_build: build-darwin build-linux build-ppc64le
+_build: build-darwin build-linux build-ppc64le build-linux-arm
 
 build: _check test _build
 
@@ -54,6 +54,9 @@ build-darwin:
 
 build-linux:
 	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux/${BINARY} main.go
+
+build-linux-arm:
+	GOOS=linux GOARCH=arm64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux-arm/${BINARY} main.go
 
 build-ppc64le:
 	GOOS=linux GOARCH=ppc64le go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux-ppc64le/${BINARY} main.go
