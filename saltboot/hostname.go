@@ -82,6 +82,7 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 
 	if err := updateHostsFile(hostName, domain, HOSTS_FILE, ipv4address); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
+		return err
 	}
 	networkSysConfig := NETWORK_SYSCONFIG_FILE
 	if isOs(os, SUSE, SLES12) {
@@ -89,9 +90,11 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 	}
 	if err := updateSysConfig(hostName, domain, networkSysConfig); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update sys config: %s", err.Error())
+		return err
 	}
 	if err := updateHostNameFile(hostName, HOSTNAME_FILE); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host name: %s", err.Error())
+		return err
 	}
 	return nil
 }

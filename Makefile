@@ -53,7 +53,7 @@ build-darwin:
 	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_x86_64/${BINARY} main.go
 
 build-linux:
-	GOOS=linux go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_x86_64/${BINARY} main.go
+	GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_x86_64/${BINARY} main.go
 
 build-linux-arm64:
 	GOOS=linux GOARCH=arm64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_arm64/${BINARY} main.go
