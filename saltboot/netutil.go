@@ -12,14 +12,30 @@ import (
 )
 
 const (
-	defaultPort      = 7070
-	portKey          = "SALTBOOT_PORT"
+	httpsEnabledKey           = "SALTBOOT_HTTPS_ENABLED"
+	portKey                   = "SALTBOOT_PORT"
+	defaultPort               = 7070
+	httpsPortKey              = "SALTBOOT_HTTPS_PORT"
+	defaultHttpsPort          = 7071
+	httpsCertFileKey          = "SALTBOOT_HTTPS_CERT_FILE"
+	defaultHttpsCertFile      = "/etc/certs/cluster.pem"
+	httpsKeyFileKey           = "SALTBOOT_HTTPS_KEY_FILE"
+	defaultHttpsKeyFile       = "/etc/certs/cluster-key.pem"
+	httpsCaCertFileKey        = "SALTBOOT_HTTPS_CACERT_FILE"
+	defaultHttpsCaCertFileKey = "/etc/certs/ca.pem"
+
 	userKey          = "SALTBOOT_USER"
 	passwdKey        = "SALTBOOT_PASSWORD"
 	signKey          = "SALTBOOT_SIGN_KEY"
 	configLocKey     = "SALTBOOT_CONFIG"
 	defaultConfigLoc = "/etc/salt-bootstrap/security-config.yml"
 )
+
+type HttpsConfig struct {
+	CertFile   string `json:"certFile" yaml:"certFile"`
+	KeyFile    string `json:"keyFile" yaml:"keyFile"`
+	CaCertFile string `json:"caCertFile" yaml:"caCertFile"`
+}
 
 type SecurityConfig struct {
 	Username      string `json:"username" yaml:"username"`
@@ -51,15 +67,95 @@ func (sc *SecurityConfig) validate() error {
 }
 
 func DetermineBootstrapPort() int {
-	portStr := os.Getenv(portKey)
-	log.Printf("[determineBootstrapPort] SALTBOOT_PORT: %s", portStr)
+	if HttpsEnabled() {
+		return DetermineHttpsPort()
+	} else {
+		return DetermineHttpPort()
+	}
+}
+
+func HttpsEnabled() bool {
+	httpsEnabled := os.Getenv(httpsEnabledKey)
+	log.Printf("[HttpsEnabled] %s: %s", httpsEnabledKey, httpsEnabled)
+	return httpsEnabled != "" && strings.ToLower(httpsEnabled) != "false"
+}
+
+func DetermineHttpsPort() int {
+	portStr := os.Getenv(httpsPortKey)
+	log.Printf("[DetermineHttpsPort] %s: %s", httpsPortKey, portStr)
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		port = defaultPort
-		log.Printf("[determineBootstrapPort] using default port: %d", port)
+		log.Printf("[DetermineHttpsPort] using default HTTPS port: %d", defaultHttpsPort)
+		port = defaultHttpsPort
 	}
-
 	return port
+}
+
+func DetermineHttpPort() int {
+	portStr := os.Getenv(portKey)
+	log.Printf("[DetermineHttpPort] %s: %s", portKey, portStr)
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Printf("[DetermineHttpPort] using default HTTP port: %d", defaultPort)
+		port = defaultPort
+	}
+	return port
+}
+
+func GetHttpsConfig() HttpsConfig {
+	var httpsConfig HttpsConfig
+	certFileStr := os.Getenv(httpsCertFileKey)
+	keyFileStr := os.Getenv(httpsKeyFileKey)
+	caCertFileStr := os.Getenv(httpsCaCertFileKey)
+	log.Printf("[GetHttpsConfig] %s: %s", httpsCertFileKey, certFileStr)
+	log.Printf("[GetHttpsConfig] %s: %s", httpsKeyFileKey, keyFileStr)
+	log.Printf("[GetHttpsConfig] %s: %s", httpsCaCertFileKey, caCertFileStr)
+
+	if certFileStr == "" {
+		httpsConfig.CertFile = defaultHttpsCertFile
+		log.Printf("[GetHttpsConfig] using default cert file: %s", defaultHttpsCertFile)
+	} else {
+		httpsConfig.CertFile = certFileStr
+	}
+	if keyFileStr == "" {
+		httpsConfig.KeyFile = defaultHttpsKeyFile
+		log.Printf("[GetHttpsConfig] using default key file: %s", defaultHttpsKeyFile)
+	} else {
+		httpsConfig.KeyFile = keyFileStr
+	}
+	if caCertFileStr == "" {
+		httpsConfig.CaCertFile = defaultHttpsCaCertFileKey
+		log.Printf("[GetHttpsConfig] using default ca cert file: %s", defaultHttpsCaCertFileKey)
+	} else {
+		httpsConfig.CaCertFile = caCertFileStr
+	}
+	return httpsConfig
+}
+
+func GetConcatenatedCertFilePath(httpsConfig HttpsConfig) (string, error) {
+	tmpFile, err := ioutil.TempFile("/tmp", "saltboot-*.pem")
+	defer tmpFile.Close()
+	if err != nil {
+		return "", err
+	}
+	serverCert, err := ioutil.ReadFile(httpsConfig.CertFile)
+	if err != nil {
+		return "", err
+	}
+	caCert, err := ioutil.ReadFile(httpsConfig.CaCertFile)
+	if err != nil {
+		return "", err
+	}
+	_, err = tmpFile.Write(serverCert)
+	if err != nil {
+		return "", err
+	}
+	_, err = tmpFile.Write(caCert)
+	if err != nil {
+		return "", err
+	}
+	log.Printf("[GetConcatenatedCertFilePath] concatenated cert file successfully created: %s", tmpFile.Name())
+	return tmpFile.Name(), nil
 }
 
 func DetermineSecurityDetails(getEnv func(key string) string, securityConfig func() string) (*SecurityConfig, error) {

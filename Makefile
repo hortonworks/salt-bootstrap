@@ -1,6 +1,6 @@
 BINARY=salt-bootstrap
 
-VERSION=0.13.9
+VERSION=0.14.0
 BUILD_TIME=$(shell date +%FT%T)
 LDFLAGS=-ldflags "-X github.com/hortonworks/salt-bootstrap/saltboot.Version=${VERSION} -X github.com/hortonworks/salt-bootstrap/saltboot.BuildTime=${BUILD_TIME}"
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.git/*")
@@ -50,7 +50,10 @@ build-docker:
 	docker run --rm ${USER_NS} -v "${PWD}":/go/src/github.com/hortonworks/salt-bootstrap -w /go/src/github.com/hortonworks/salt-bootstrap -e VERSION=${VERSION} golang:1.14.3 make build
 
 build-darwin:
-	GOOS=darwin go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_x86_64/${BINARY} main.go
+	GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_x86_64/${BINARY} main.go
+
+build-darwin-arm64:
+	GOOS=darwin GOARCH=arm64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_arm64/${BINARY} main.go
 
 build-linux:
 	GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_x86_64/${BINARY} main.go
