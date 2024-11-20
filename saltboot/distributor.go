@@ -2,6 +2,7 @@ package saltboot
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -17,7 +18,30 @@ import (
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
+func determineProtocol() string {
+	if HttpsEnabled() {
+		return "https://"
+	} else {
+		return "http://"
+	}
+}
+
+func getHttpClient() *http.Client {
+	if HttpsEnabled() {
+		return &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+	} else {
+		return &http.Client{}
+	}
+}
+
 func DistributeRequest(clients []string, endpoint, user, pass string, requestBody RequestBody) <-chan model.Response {
+	protocol := determineProtocol()
 	var wg sync.WaitGroup
 	wg.Add(len(clients))
 	c := make(chan model.Response, len(clients))
@@ -38,16 +62,16 @@ func DistributeRequest(clients []string, endpoint, user, pass string, requestBod
 			if len(requestBody.Signature) > 0 {
 				indexString := strconv.Itoa(index)
 				log.Printf("[distribute] Send signed request to client: %s with index: %s", client, indexString)
-				req, _ = http.NewRequest("POST", "http://"+clientAddr+endpoint+"?index="+indexString, bytes.NewBufferString(requestBody.SignedPayload))
+				req, _ = http.NewRequest("POST", protocol+clientAddr+endpoint+"?index="+indexString, bytes.NewBufferString(requestBody.SignedPayload))
 				req.Header.Set(SIGNATURE, requestBody.Signature)
 			} else {
 				log.Printf("[distribute] Send plain request to client: %s", client)
-				req, _ = http.NewRequest("POST", "http://"+clientAddr+endpoint, bytes.NewBuffer(requestBody.PlainPayload))
+				req, _ = http.NewRequest("POST", protocol+clientAddr+endpoint, bytes.NewBuffer(requestBody.PlainPayload))
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.SetBasicAuth(user, pass)
 
-			httpClient := &http.Client{}
+			httpClient := getHttpClient()
 			resp, err := httpClient.Do(req)
 			if err != nil {
 				log.Printf("[distribute] [ERROR] Failed to send request to: %s, error: %s", client, err.Error())
@@ -81,6 +105,7 @@ func DistributeRequest(clients []string, endpoint, user, pass string, requestBod
 func DistributeFileUploadRequest(endpoint string, user string, pass string, targets []string, path string,
 	permissions string, file multipart.File, header *multipart.FileHeader, signature string) <-chan model.Response {
 
+	protocol := determineProtocol()
 	var wg sync.WaitGroup
 	wg.Add(len(targets))
 	c := make(chan model.Response, len(targets))
@@ -123,12 +148,12 @@ func DistributeFileUploadRequest(endpoint string, user string, pass string, targ
 				targetAddress = target + ":" + strconv.Itoa(DetermineBootstrapPort())
 			}
 
-			req, err := http.NewRequest("POST", "http://"+targetAddress+endpoint, bytes.NewReader(fileContent))
+			req, err := http.NewRequest("POST", protocol+targetAddress+endpoint, bytes.NewReader(fileContent))
 			req.Header.Set(SIGNATURE, signature)
 			req.Header.Set("Content-Type", bodyWriter.FormDataContentType())
 			req.SetBasicAuth(user, pass)
 
-			httpClient := &http.Client{}
+			httpClient := getHttpClient()
 			resp, err := httpClient.Do(req)
 			if err != nil {
 				log.Printf("[DistributeFileUploadRequest] [ERROR] Failed to send request to: %s, error: %s", target, err.Error())
