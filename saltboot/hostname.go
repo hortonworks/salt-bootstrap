@@ -118,7 +118,8 @@ func updateHostsFile(hostName string, domain string, file string, ipv4address st
 			filteredLines = append(filteredLines, line)
 		}
 	}
-	hostsFile = strings.Join(filteredLines, "\n") + "\n" + ipv4HostString
+	var hostsLines = append(filteredLines, ipv4HostString)
+	hostsFile = strings.Join(hostsLines, "\n") + "\n"
 	log.Printf("[updateHostsFile] updated hosts file: %s", hostsFile)
 	err = writeFile(file, []byte(hostsFile), 0644)
 	if err != nil {
