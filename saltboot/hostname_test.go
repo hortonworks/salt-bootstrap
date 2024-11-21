@@ -23,7 +23,8 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 127.0.0.1	localhost
 255.255.255.255	broadcasthost
 ::1             localhost
-10.0.0.1 hostname-1.compute.internal hostname-1`
+10.0.0.1 hostname-1.compute.internal hostname-1
+`
 		return []byte(hostsFile), nil
 	}
 	defer func() {
@@ -45,7 +46,9 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 127.0.0.1	localhost
 255.255.255.255	broadcasthost
 ::1             localhost
-10.0.0.1 hostname-1.example.com hostname-1`
+
+10.0.0.1 hostname-1.example.com hostname-1
+`
 
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
@@ -59,7 +62,8 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 255.255.255.255	broadcasthost
 ::1             localhost
 10.0.0.1 hostname-1.compute.internal hostname-1
-10.0.0.2 hostname-2.compute.internal hostname-2`
+10.0.0.2 hostname-2.compute.internal hostname-2
+`
 		return []byte(hostsFile), nil
 	}
 	defer func() {
@@ -82,7 +86,9 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 255.255.255.255	broadcasthost
 ::1             localhost
 10.0.0.2 hostname-2.compute.internal hostname-2
-10.0.0.1 hostname-1.example.com hostname-1`
+
+10.0.0.1 hostname-1.example.com hostname-1
+`
 
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
@@ -97,7 +103,8 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 ::1             localhost
 10.0.0.2 hostname-2.compute.internal hostname-2
 10.0.0.1 hostname-1.compute.internal hostname-1
-10.0.0.3 hostname-3.compute.internal hostname-3`
+10.0.0.3 hostname-3.compute.internal hostname-3
+`
 		return []byte(hostsFile), nil
 	}
 	defer func() {
@@ -121,7 +128,9 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 ::1             localhost
 10.0.0.2 hostname-2.compute.internal hostname-2
 10.0.0.3 hostname-3.compute.internal hostname-3
-10.0.0.1 hostname-1.example.com hostname-1`
+
+10.0.0.1 hostname-1.example.com hostname-1
+`
 
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
@@ -135,7 +144,8 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 255.255.255.255	broadcasthost
 ::1             localhost
 10.0.0.2 hostname-2
-10.0.0.3 hostname-3`
+10.0.0.3 hostname-3
+`
 		return []byte(hostsFile), nil
 	}
 	defer func() {
@@ -159,7 +169,9 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 ::1             localhost
 10.0.0.2 hostname-2
 10.0.0.3 hostname-3
-10.0.0.1 hostname-1.example.com hostname-1`
+
+10.0.0.1 hostname-1.example.com hostname-1
+`
 
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
@@ -174,7 +186,8 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 ::1             localhost
 10.0.0.1 hostname-1.compute.internal hostname-1
 10.0.0.2 hostname-2.compute.internal hostname-2
-10.0.0.3 hostname-3.compute.internal hostname-3`
+10.0.0.3 hostname-3.compute.internal hostname-3
+`
 		return []byte(hostsFile), nil
 	}
 	defer func() {
@@ -198,7 +211,9 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 ::1             localhost
 10.0.0.2 hostname-2.compute.internal hostname-2
 10.0.0.3 hostname-3.compute.internal hostname-3
-10.0.0.1 hostname-1.compute.internal hostname-1`
+
+10.0.0.1 hostname-1.compute.internal hostname-1
+`
 
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
