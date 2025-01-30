@@ -66,8 +66,8 @@ func (sc *SecurityConfig) validate() error {
 	return nil
 }
 
-func DetermineBootstrapPort() int {
-	if HttpsEnabled() {
+func DetermineBootstrapPort(httpsEnabled bool) int {
+	if httpsEnabled {
 		return DetermineHttpsPort()
 	} else {
 		return DetermineHttpPort()
