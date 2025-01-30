@@ -6,62 +6,42 @@ import (
 	"testing"
 )
 
-func TestDetermineBootstrapPortDefault(t *testing.T) {
-	port := DetermineBootstrapPort()
-
-	if port != defaultPort {
-		t.Errorf("port does not match the default port %d == %d", defaultPort, port)
-	}
-}
-
 func TestDetermineBootstrapPortDefaultHttpsFalse(t *testing.T) {
-	os.Setenv(httpsEnabledKey, "false")
-
-	port := DetermineBootstrapPort()
+	port := DetermineBootstrapPort(false)
 
 	if port != defaultPort {
 		t.Errorf("port does not match the default port %d == %d", defaultPort, port)
 	}
-
-	os.Unsetenv(httpsEnabledKey)
 }
 
 func TestDetermineBootstrapPortDefaultHttps(t *testing.T) {
-	os.Setenv(httpsEnabledKey, "true")
-
-	port := DetermineBootstrapPort()
+	port := DetermineBootstrapPort(true)
 
 	if port != defaultHttpsPort {
 		t.Errorf("port does not match the HTTPS default port %d == %d", defaultHttpsPort, port)
 	}
-
-	os.Unsetenv(httpsEnabledKey)
 }
 
 func TestDetermineBootstrapPortCustom(t *testing.T) {
 	os.Setenv(portKey, "8080")
+	defer os.Unsetenv(portKey)
 
-	port := DetermineBootstrapPort()
+	port := DetermineBootstrapPort(false)
 
 	if port != 8080 {
 		t.Errorf("port does not match the custom port %d == %d", 8080, port)
 	}
-
-	os.Unsetenv(portKey)
 }
 
 func TestDetermineBootstrapPortCustomHttps(t *testing.T) {
-	os.Setenv(httpsEnabledKey, "true")
 	os.Setenv(httpsPortKey, "8080")
+	defer os.Unsetenv(httpsPortKey)
 
-	port := DetermineBootstrapPort()
+	port := DetermineBootstrapPort(true)
 
 	if port != 8080 {
 		t.Errorf("port does not match the custom HTTPS port %d == %d", 8080, port)
 	}
-
-	os.Unsetenv(httpsEnabledKey)
-	os.Unsetenv(httpsPortKey)
 }
 
 func TestDetermineHttpsPortDefault(t *testing.T) {
