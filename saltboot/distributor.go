@@ -30,12 +30,14 @@ func determineProtocol(httpsEnabled bool) string {
 
 func getHttpClient(httpsEnabled bool) *http.Client {
 	if httpsEnabled {
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{}
+		}
+		transport.TLSClientConfig.InsecureSkipVerify = true
+
 		return &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
+			Transport: transport,
 		}
 	} else {
 		return &http.Client{}
