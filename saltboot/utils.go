@@ -61,3 +61,47 @@ func containsLowerCase(name, substr string) bool {
 func isCloud(name string, cloud *Cloud) bool {
 	return cloud != nil && strings.ToLower(cloud.Name) == strings.ToLower(name)
 }
+
+// Separate functions for each type combination are only needed, because our current Go version (1.14.3) doesn't support generics yet.
+
+// MapStringToUint16 maps a []string to a []uint16 using the provided function.
+func MapStringToUint16(slice []string, fn func(string) uint16) []uint16 {
+	result := make([]uint16, len(slice))
+	for i, s := range slice {
+		result[i] = fn(s)
+	}
+	return result
+}
+
+// MapUint16ToString maps a []uint16 to a []string using the provided function.
+func MapUint16ToString(slice []uint16, fn func(uint16) string) []string {
+	result := make([]string, len(slice))
+	for i, s := range slice {
+		result[i] = fn(s)
+	}
+	return result
+}
+
+func EqualUint16Slices(s1, s2 []uint16) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i := range s1 {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func EqualStringSlices(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for i := range s1 {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+	return true
+}

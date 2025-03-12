@@ -1,6 +1,7 @@
 package saltboot
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/gorilla/mux"
 	"log"
@@ -60,20 +61,27 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, SIGNED)).Methods("POST")
 	r.Handle(FileDistributeEP, authenticator.Wrap(FileUploadDistributeHandler, SIGNED)).Methods("POST")
 
-	http.Handle("/", r)
-
 	httpsEnabled := HttpsEnabled()
 	httpsServerExit := make(chan bool)
 	if httpsEnabled {
 		go func() {
 			httpsAddress := fmt.Sprintf(":%d", DetermineHttpsPort())
 			httpsConfig := GetHttpsConfig()
+			server := &http.Server{
+				Addr:    httpsAddress,
+				Handler: r,
+				TLSConfig: &tls.Config{
+					MinVersion:   httpsConfig.MinTlsVersion,
+					MaxVersion:   httpsConfig.MaxTlsVersion,
+					CipherSuites: httpsConfig.CipherSuites,
+				},
+			}
 			concCertFile, err := GetConcatenatedCertFilePath(httpsConfig)
 			if err != nil {
 				log.Printf("[web] Could not concatenate the server cert and ca cert: %v", err)
 			} else {
 				log.Printf("[web] starting server at address: %s", httpsAddress)
-				if err = http.ListenAndServeTLS(httpsAddress, concCertFile, httpsConfig.KeyFile, nil); err != nil {
+				if err = server.ListenAndServeTLS(concCertFile, httpsConfig.KeyFile); err != nil {
 					log.Printf("[web] [ERROR] unable to ListenAndServeTLS: %s", err.Error())
 				}
 				httpsServerExit <- true
@@ -82,8 +90,12 @@ func NewCloudbreakBootstrapWeb() {
 	}
 
 	httpAddress := fmt.Sprintf(":%d", DetermineHttpPort())
+	server := &http.Server{
+		Addr:    httpAddress,
+		Handler: r,
+	}
 	log.Printf("[web] starting server at address: %s", httpAddress)
-	if err := http.ListenAndServe(httpAddress, nil); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Printf("[web] [ERROR] unable to ListenAndServe: %s", err.Error())
 	}
 
