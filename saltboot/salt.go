@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -94,7 +93,7 @@ type GrainConfig struct {
 
 func (r SaltActionRequest) String() string {
 	b, _ := json.Marshal(r)
-	return fmt.Sprintf(string(b))
+	return string(b)
 }
 
 func (r SaltActionRequest) distributeAction(user string, pass string, signedRequestBody RequestBody) []model.Response {

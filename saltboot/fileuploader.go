@@ -57,7 +57,7 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	path := req.FormValue("path")
-	log.Printf("[FileUploadHandler] path: " + path)
+	log.Println("[FileUploadHandler] path: " + path)
 
 	file, header, err := req.FormFile("file")
 	if err != nil {
@@ -112,7 +112,7 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	} else {
-		log.Printf("[FileUploadHandler] FileName: " + header.Filename)
+		log.Println("[FileUploadHandler] FileName: " + header.Filename)
 		if err := ioutil.WriteFile(path+"/"+header.Filename, b, permissions); err != nil {
 			log.Printf("[fileUploadHandler] [ERROR] wirte file error: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)

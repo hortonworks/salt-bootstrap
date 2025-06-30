@@ -40,7 +40,7 @@ func TestHostsFileWriteRemoveExistingIp(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
+	updateHostsFile("hostname-1.example.com", "example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -79,7 +79,7 @@ func TestHostsFileWriteRemoveExistingIpNotLastLine(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
+	updateHostsFile("hostname-1", "example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -120,7 +120,7 @@ func TestHostsFileWriteRemoveExistingIpMiddleLastLine(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
+	updateHostsFile("hostname-1", "example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -161,7 +161,7 @@ func TestHostsFileWriteIpNotPresent(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".example.com", "hosts", "10.0.0.1")
+	updateHostsFile("hostname-1", "example.com", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -203,7 +203,7 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 		writeFile = emptyWriteFile
 	}()
 
-	updateHostsFile("hostname-1", ".compute.internal", "hosts", "10.0.0.1")
+	updateHostsFile("hostname-1", "compute.internal", "hosts", "10.0.0.1")
 
 	expected := `
 127.0.0.1	localhost
@@ -218,4 +218,29 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 	if expected != result {
 		t.Errorf("Invalid hostname replacement, %s != %s", expected, result)
 	}
+}
+
+func TestCreateFQDN(t *testing.T) {
+	fqdn := constructFQDN("hostname-1.example.com", "example.com")
+	if fqdn != "hostname-1.example.com" {
+		t.Errorf("fqdn does not match, expected: %s, got: %s", "hostname-1.example.com", fqdn)
+	}
+
+	fqdn = constructFQDN("hostname-2", "example.com")
+	if fqdn != "hostname-2.example.com" {
+		t.Errorf("fqdn does not match, expected: %s, got: %s", "hostname-2.example.com", fqdn)
+	}
+}
+
+func TestGetShortHostName(t *testing.T) {
+	hostName := getShortHostName("hostname-1.example.com", "example.com")
+	if hostName != "hostname-1" {
+		t.Errorf("hostName does not match, expected: %s, got: %s", "hostname-1", hostName)
+	}
+
+	hostName = getShortHostName("hostname-1", "example.com")
+	if hostName != "hostname-1" {
+		t.Errorf("hostName does not match, expected: %s, got: %s", "hostname-1", hostName)
+	}
+
 }

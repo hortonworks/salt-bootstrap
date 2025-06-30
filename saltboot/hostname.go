@@ -2,12 +2,13 @@ package saltboot
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 )
 
-const EXAMPLE_DOMAIN = ".example.com"
+const EXAMPLE_DOMAIN = "example.com"
 const HOSTS_FILE = "/etc/hosts"
 const NETWORK_SYSCONFIG_FILE = "/etc/sysconfig/network"
 const NETWORK_SYSCONFIG_FILE_SUSE = "/etc/sysconfig/network/config"
@@ -18,6 +19,20 @@ var writeFile = ioutil.WriteFile
 
 func getFQDN() (string, error) {
 	return ExecCmd("hostname", "-f")
+}
+
+func constructFQDN(hostName, domain string) string {
+	var fqdn string
+	if strings.Contains(hostName, domain) {
+		fqdn = hostName
+	} else {
+		fqdn = hostName + "." + domain
+	}
+	return fqdn
+}
+
+func getShortHostName(hostName, domain string) string {
+	return strings.TrimSuffix(hostName, "."+domain)
 }
 
 func getHostName() (string, error) {
@@ -76,10 +91,6 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 		}
 	}
 
-	if !strings.HasPrefix(domain, ".") {
-		domain = "." + domain
-	}
-
 	if err := updateHostsFile(hostName, domain, HOSTS_FILE, ipv4address); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
 		return err
@@ -99,7 +110,7 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 	return nil
 }
 
-func updateHostsFile(hostName string, domain string, file string, ipv4address string) error {
+func updateHostsFile(hostName, domain string, file string, ipv4address string) error {
 	log.Printf("[updateHostsFile] hostName: %s, domain: %s, ip: %s", hostName, domain, ipv4address)
 	b, err := readFile(file)
 	if err != nil {
@@ -108,7 +119,7 @@ func updateHostsFile(hostName string, domain string, file string, ipv4address st
 	hostsFile := string(b)
 	log.Printf("[updateHostsFile] original hosts file: %s", hostsFile)
 
-	ipv4HostString := ipv4address + " " + hostName + domain + " " + hostName
+	ipv4HostString := fmt.Sprintf("%s %s %s", ipv4address, constructFQDN(hostName, domain), getShortHostName(hostName, domain))
 	log.Printf("[updateHostsFile] ipv4HostString: %s", ipv4HostString)
 
 	lines := strings.Split(hostsFile, "\n")
@@ -134,7 +145,7 @@ func updateHostsFile(hostName string, domain string, file string, ipv4address st
 	return nil
 }
 
-func updateSysConfig(hostName string, domain string, file string) error {
+func updateSysConfig(hostName, domain, file string) error {
 	log.Printf("[updateSysConfig] hostname: %s, domain: %s", hostName, domain)
 	b, err := readFile(file)
 	if err != nil {
@@ -151,7 +162,7 @@ func updateSysConfig(hostName string, domain string, file string) error {
 		}
 	}
 
-	hostNameString := "HOSTNAME=" + hostName + domain
+	hostNameString := "HOSTNAME=" + constructFQDN(hostName, domain)
 	sysConfig = strings.Join(filteredLines, "\n") + "\n" + hostNameString
 	log.Printf("[updateSysConfig] updated sysconfig %s: %s", file, sysConfig)
 	err = writeFile(file, []byte(sysConfig), 0644)

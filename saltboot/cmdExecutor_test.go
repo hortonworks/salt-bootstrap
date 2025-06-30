@@ -37,7 +37,7 @@ func checkExecutedCommands(expectedCommands []string, t *testing.T) {
 				t.Errorf("wrong commands were executed: %s == %s", expectedCommand, actualCommand)
 			}
 		} else if expectedCommand != actualCommand {
-			t.Errorf("wrong commands were executed: %s == %s", expectedCommand, actualCommand)
+			t.Errorf("wrong commands were executed: %s != %s", expectedCommand, actualCommand)
 		}
 	}
 }
