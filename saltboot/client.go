@@ -65,7 +65,7 @@ func ClientHostnameDistributionHandler(w http.ResponseWriter, req *http.Request)
 	user, pass := GetAuthUserPass(req)
 	responses := clients.DistributeHostnameRequest(user, pass)
 	cResp := model.Responses{Responses: responses}
-	log.Printf("[ClientHostnameRequestHandler] distribute request executed: %s" + cResp.String())
+	log.Printf("[ClientHostnameRequestHandler] distribute request executed: %s", cResp.String())
 	if err := json.NewEncoder(w).Encode(cResp); err != nil {
 		log.Printf("[ClientHostnameRequestHandler] [ERROR] couldn't encode json: %s", err.Error())
 	}
@@ -86,7 +86,7 @@ func ClientDistributionHandler(w http.ResponseWriter, req *http.Request) {
 	user, pass := GetAuthUserPass(req)
 	responses := clients.DistributeAddress(user, pass)
 	cResp := model.Responses{Responses: responses}
-	log.Printf("[clientDistributionHandler] distribute request executed: %s" + cResp.String())
+	log.Printf("[clientDistributionHandler] distribute request executed: %s", cResp.String())
 	if err := json.NewEncoder(w).Encode(cResp); err != nil {
 		log.Printf("[ClientHostnameRequestHandler] [ERROR] couldn't encode json: %s", err.Error())
 	}

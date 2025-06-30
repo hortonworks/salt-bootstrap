@@ -67,6 +67,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	defer func() { watchCommands = false }()
 
 	tempDirName, _ := ioutil.TempDir("", "saltminionruntest")
+	hostname := "testhostname.example.com"
 
 	request := SaltActionRequest{
 		Master: SaltMaster{Address: "address"},
@@ -74,6 +75,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 			Address:   "address",
 			HostGroup: "group",
 			Server:    "server",
+			Hostname:  &hostname,
 			Roles:     []string{"role1", "role2"},
 		}},
 	}
@@ -109,9 +111,8 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	}()
 
 	checkExecutedCommands([]string{
-		"hostname -s",
 		"hostname -d",
-		"hostname ",
+		"hostname testhostname.example.com",
 		"grep SUSE /etc/issue",
 		"grep sles12 /etc/issue",
 		"ps aux",
