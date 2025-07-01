@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
-	"github.com/kless/osutil/user/crypt/sha512_crypt"
+	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
 const (
