@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -66,15 +65,15 @@ func (a *Authenticator) Wrap(handler func(w http.ResponseWriter, req *http.Reque
 			if strings.Index(r.Header.Get("Content-Type"), "multipart") == 0 {
 				file, _, _ := r.FormFile("file")
 				defer closeIt(file)
-				if _, err := ioutil.ReadAll(io.TeeReader(file, body)); err != nil {
+				if _, err := io.ReadAll(io.TeeReader(file, body)); err != nil {
 					log.Printf("[Authenticator] [ERROR] couldn't read body: %s", err.Error())
 				}
 			} else {
 				defer closeIt(r.Body)
-				if _, err := ioutil.ReadAll(io.TeeReader(r.Body, body)); err != nil {
+				if _, err := io.ReadAll(io.TeeReader(r.Body, body)); err != nil {
 					log.Printf("[Authenticator] [ERROR] couldn't read body: %s", err.Error())
 				}
-				r.Body = ioutil.NopCloser(body)
+				r.Body = io.NopCloser(body)
 				r.Header.Set(SIGNED_CONTENT, string(body.Bytes()))
 			}
 			signature := strings.TrimSpace(r.Header.Get(SIGNATURE))

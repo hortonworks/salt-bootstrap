@@ -1,7 +1,6 @@
 package saltboot
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -83,7 +82,7 @@ func mockFunctions() {
 		return nil
 	}
 	readFile = func(filename string) ([]byte, error) {
-		return ioutil.ReadFile("testdata/" + filename)
+		return os.ReadFile("testdata/" + filename)
 	}
 }
 

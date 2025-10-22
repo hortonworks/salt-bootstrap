@@ -3,7 +3,6 @@ package saltboot
 import (
 	"archive/zip"
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +24,7 @@ func TestUnzipFileWithDirectorySuccess(t *testing.T) {
 }
 
 func executeTest(t *testing.T, file string) {
-	tempDirName, _ := ioutil.TempDir("", "unziptest")
+	tempDirName, _ := os.MkdirTemp("", "unziptest")
 	defer os.RemoveAll(tempDirName)
 
 	func() {
@@ -37,7 +36,7 @@ func executeTest(t *testing.T, file string) {
 		zipEntry.Write(testBytes)
 		zipWriter.Close()
 		zipFileName := filepath.Join(tempDirName, zipName)
-		ioutil.WriteFile(zipFileName, buf.Bytes(), 0600)
+		WriteFile(zipFileName, buf.Bytes(), 0600)
 
 		err := Unzip(zipFileName, tempDirName)
 		if err != nil {
@@ -46,7 +45,7 @@ func executeTest(t *testing.T, file string) {
 		}
 
 		testFileName := filepath.Join(tempDirName, file)
-		content, err := ioutil.ReadFile(testFileName)
+		content, err := os.ReadFile(testFileName)
 		if err != nil {
 			t.Errorf("Failed to read back decompressed file '%s' because '%s'", file, err)
 		} else if !bytes.Equal(content, testBytes) {
