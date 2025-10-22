@@ -7,12 +7,13 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+
+	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 )
 
 const (
@@ -119,7 +120,7 @@ func getMinionFingerprintFromPrivateKey() model.Response {
 	keyLocation := MinionKey
 	log.Println("[getMinionFingerprintFromPrivateKey] generate the fingerprint from the minion's private key: " + keyLocation)
 
-	privateKeyText, err := ioutil.ReadFile(keyLocation)
+	privateKeyText, err := os.ReadFile(keyLocation)
 	if err != nil {
 		return createErrorResponse(fmt.Sprintf("unable to load file %s", keyLocation), err)
 	}

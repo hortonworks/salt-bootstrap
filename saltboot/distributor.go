@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -101,7 +100,7 @@ func DistributeRequest(clients []string, endpoint, user, pass string, requestBod
 				return
 			}
 
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			decoder := json.NewDecoder(strings.NewReader(string(body)))
 			var response model.Response
 			if err := decoder.Decode(&response); err != nil {
@@ -184,7 +183,7 @@ func DistributeFileUploadRequest(endpoint string, user string, pass string, targ
 				return
 			}
 
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			defer closeIt(resp.Body)
 			if resp.StatusCode != http.StatusCreated {
 				log.Printf("[DistributeFileUploadRequest] Error response from: %s, error: %s", respHost, body)

@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http/httptest"
 	"os"
@@ -31,7 +30,7 @@ func TestUpload(t *testing.T) {
 	part.Write(expected)
 	multiWriter.Close()
 
-	tempDirName, _ := ioutil.TempDir("", "fileuploadertest")
+	tempDirName, _ := os.MkdirTemp("", "fileuploadertest")
 	defer os.RemoveAll(tempDirName)
 
 	req := httptest.NewRequest("POST", "http://fileupload?path="+tempDirName, body)
@@ -40,7 +39,7 @@ func TestUpload(t *testing.T) {
 
 	FileUploadHandler(writer, req)
 
-	content, _ := ioutil.ReadFile(tempDirName + string(filepath.Separator) + "test.txt")
+	content, _ := os.ReadFile(tempDirName + string(filepath.Separator) + "test.txt")
 
 	if writer.Code != 201 {
 		t.Errorf("Wrong status code %d == %d", 201, writer.Code)
@@ -58,11 +57,11 @@ func TestUploadZip(t *testing.T) {
 	zipEntry.Write(expected)
 	zipWriter.Close()
 
-	tempDirName, _ := ioutil.TempDir("", "fileuploadertest")
+	tempDirName, _ := os.MkdirTemp("", "fileuploadertest")
 	defer os.RemoveAll(tempDirName)
 
 	zipFileName := filepath.Join(tempDirName, "test.zip")
-	ioutil.WriteFile(zipFileName, buf.Bytes(), 0600)
+	WriteFile(zipFileName, buf.Bytes(), 0600)
 
 	body := &bytes.Buffer{}
 	multiWriter := multipart.NewWriter(body)
@@ -80,7 +79,7 @@ func TestUploadZip(t *testing.T) {
 
 	FileUploadHandler(writer, req)
 
-	content, _ := ioutil.ReadFile(tempDirName + string(filepath.Separator) + "test.txt")
+	content, _ := os.ReadFile(tempDirName + string(filepath.Separator) + "test.txt")
 
 	if writer.Code != 201 {
 		t.Errorf("Wrong status code %d == %d", 201, writer.Code)

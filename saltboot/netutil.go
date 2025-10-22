@@ -3,7 +3,6 @@ package saltboot
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -223,16 +222,16 @@ func GetHttpsConfig() HttpsConfig {
 }
 
 func GetConcatenatedCertFilePath(httpsConfig HttpsConfig) (string, error) {
-	tmpFile, err := ioutil.TempFile("/tmp", "saltboot-*.pem")
+	tmpFile, err := os.CreateTemp("/tmp", "saltboot-*.pem")
 	defer tmpFile.Close()
 	if err != nil {
 		return "", err
 	}
-	serverCert, err := ioutil.ReadFile(httpsConfig.CertFile)
+	serverCert, err := os.ReadFile(httpsConfig.CertFile)
 	if err != nil {
 		return "", err
 	}
-	caCert, err := ioutil.ReadFile(httpsConfig.CaCertFile)
+	caCert, err := os.ReadFile(httpsConfig.CaCertFile)
 	if err != nil {
 		return "", err
 	}
@@ -273,7 +272,7 @@ func DetermineSecurityDetails(getEnv func(key string) string, securityConfig fun
 		configLoc = securityConfig()
 	}
 
-	content, err := ioutil.ReadFile(configLoc)
+	content, err := os.ReadFile(configLoc)
 	if err != nil {
 		return nil, err
 	}

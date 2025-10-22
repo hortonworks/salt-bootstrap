@@ -3,7 +3,7 @@ package saltboot
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -70,7 +70,7 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	b, _ := ioutil.ReadAll(file)
+	b, _ := io.ReadAll(file)
 
 	if err := os.MkdirAll(path, 0744); err != nil {
 		log.Printf("[FileUploadHandler] [ERROR] make dir error: %s", err.Error())
@@ -93,7 +93,7 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 
 	if strings.Contains(header.Filename, ".zip") {
 		log.Println("[FileUploadHandler] unzip file from /tmp")
-		if err := ioutil.WriteFile("/tmp/"+header.Filename, b, permissions); err != nil {
+		if err := WriteFile("/tmp/"+header.Filename, b, permissions); err != nil {
 			log.Printf("[FileUploadHandler] [ERROR] unable to write file: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			if _, err := w.Write([]byte("500 Internal Server Error")); err != nil {
@@ -113,7 +113,7 @@ func FileUploadHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		log.Println("[FileUploadHandler] FileName: " + header.Filename)
-		if err := ioutil.WriteFile(path+"/"+header.Filename, b, permissions); err != nil {
+		if err := WriteFile(path+"/"+header.Filename, b, permissions); err != nil {
 			log.Printf("[fileUploadHandler] [ERROR] wirte file error: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			if _, err := w.Write([]byte("500 Internal Server Error")); err != nil {

@@ -1,13 +1,12 @@
 package saltboot
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func TestWriteToFile(t *testing.T) {
-	tempDirName, _ := ioutil.TempDir("", "writepillartest")
+	tempDirName, _ := os.MkdirTemp("", "writepillartest")
 	defer os.RemoveAll(tempDirName)
 
 	list := make([]Server, 0)
@@ -25,7 +24,7 @@ func TestWriteToFile(t *testing.T) {
 	}
 
 	expected := "\naddress name\naddress2 name2"
-	content, _ := ioutil.ReadFile(tempDirName + "servers")
+	content, _ := os.ReadFile(tempDirName + "servers")
 	if string(content) != expected {
 		t.Errorf("servers content not match %s == %s", expected, string(content))
 	}

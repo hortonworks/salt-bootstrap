@@ -3,7 +3,6 @@ package saltboot
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -66,7 +65,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	watchCommands = true
 	defer func() { watchCommands = false }()
 
-	tempDirName, _ := ioutil.TempDir("", "saltminionruntest")
+	tempDirName, _ := os.MkdirTemp("", "saltminionruntest")
 	hostname := "testhostname.example.com"
 
 	request := SaltActionRequest{
@@ -94,7 +93,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 			t.Errorf("missing minion dir %s", tempDirName+"/etc/salt/minion.d")
 		}
 
-		content, _ := ioutil.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
+		content, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
 		var masters map[string][]string
 		yaml.Unmarshal(content, &masters)
 		expected := map[string][]string{"master": {"server"}}
@@ -102,7 +101,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 			t.Errorf("master config not match %s == %s", expected, string(content))
 		}
 
-		grainYaml, _ := ioutil.ReadFile(tempDirName + "/etc/salt/grains")
+		grainYaml, _ := os.ReadFile(tempDirName + "/etc/salt/grains")
 		err := yaml.Unmarshal(grainYaml, &GrainConfig{})
 		if err != nil {
 			t.Errorf("couldn't unmarshall grain yaml: %s", err)
@@ -202,7 +201,7 @@ func TestSaltServerStopRequestHandler(t *testing.T) {
 }
 
 func TestWritePillar(t *testing.T) {
-	tempDirName, _ := ioutil.TempDir("", "writepillartest")
+	tempDirName, _ := os.MkdirTemp("", "writepillartest")
 	defer os.RemoveAll(tempDirName)
 
 	json := make(map[string]interface{})
@@ -219,7 +218,7 @@ func TestWritePillar(t *testing.T) {
 	}
 
 	expected := "#!json\n{\n\t\"key\": \"value\"\n}"
-	content, _ := ioutil.ReadFile(tempDirName + "/srv/pillar" + pillar.Path)
+	content, _ := os.ReadFile(tempDirName + "/srv/pillar" + pillar.Path)
 	if string(content) != expected {
 		t.Errorf("yml content not match %s == %s", expected, string(content))
 	}

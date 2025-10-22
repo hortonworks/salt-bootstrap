@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -191,7 +190,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterIpDiffers([]string{saltMinion.Server})
 	}
 
-	err = ioutil.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
+	err = WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
@@ -226,7 +225,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 			resp.WriteHttp(w)
 			return
 		}
-		err = ioutil.WriteFile(grainConfigPath, grainYaml, 0644)
+		err = WriteFile(grainConfigPath, grainYaml, 0644)
 		if err != nil {
 			resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 			resp.WriteHttp(w)
@@ -410,7 +409,7 @@ func writePillarImpl(pillar SaltPillar, basePath string) (outStr string, err err
 
 	jsonDef := []byte("#!json\n")
 	jsn, _ := json.MarshalIndent(pillar.Json, "", "\t")
-	err = ioutil.WriteFile(file, append(jsonDef, jsn...), 0644)
+	err = WriteFile(file, append(jsonDef, jsn...), 0644)
 	if err != nil {
 		return "Failed to write to " + file, err
 	}
@@ -512,7 +511,7 @@ func distributePillarImpl(distributeActionRequest func([]string, string, string,
 
 func isGrainsConfigNeeded(grainConfigLocation string) bool {
 	log.Println("[isGrainsConfigNeeded] check whether salt grains are empty, config file: " + grainConfigLocation)
-	b, err := ioutil.ReadFile(grainConfigLocation)
+	b, err := os.ReadFile(grainConfigLocation)
 	if err == nil && len(b) > 0 {
 		var grains = GrainConfig{}
 		if err := yaml.Unmarshal(b, &grains); err != nil {
@@ -541,7 +540,7 @@ func shouldAppendPrewarmedRoles(prewarmRoleLocation string) bool {
 func isSaltMasterIpDiffers(servers []string) bool {
 	log.Println("[isSaltMasterIpDiffers] check whether salt-minion requires restart")
 	masterConfFile := "/etc/salt/minion.d/master.conf"
-	b, err := ioutil.ReadFile(masterConfFile)
+	b, err := os.ReadFile(masterConfFile)
 	if err == nil && len(b) > 0 {
 		var saltMasterIps = make(map[string][]string)
 		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {

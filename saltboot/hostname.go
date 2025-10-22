@@ -3,8 +3,8 @@ package saltboot
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -14,8 +14,8 @@ const NETWORK_SYSCONFIG_FILE = "/etc/sysconfig/network"
 const NETWORK_SYSCONFIG_FILE_SUSE = "/etc/sysconfig/network/config"
 const HOSTNAME_FILE = "/etc/hostname"
 
-var readFile = ioutil.ReadFile
-var writeFile = ioutil.WriteFile
+var readFile = os.ReadFile
+var writeFile = os.WriteFile
 
 func getFQDN() (string, error) {
 	return ExecCmd("hostname", "-f")
