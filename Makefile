@@ -50,19 +50,19 @@ build-docker:
 	docker run --rm ${USER_NS} -v "${PWD}":/go/src/github.com/hortonworks/salt-bootstrap -w /go/src/github.com/hortonworks/salt-bootstrap -e VERSION=${VERSION} golang:1.24.0 make build
 
 build-darwin:
-	GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_x86_64/${BINARY} main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a ${LDFLAGS} -o build/Darwin_x86_64/${BINARY} main.go
 
 build-darwin-arm64:
-	GOOS=darwin GOARCH=arm64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Darwin_arm64/${BINARY} main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a ${LDFLAGS} -o build/Darwin_arm64/${BINARY} main.go
 
 build-linux:
-	GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_x86_64/${BINARY} main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a ${LDFLAGS} -o build/Linux_x86_64/${BINARY} main.go
 
 build-linux-arm64:
-	GOOS=linux GOARCH=arm64 go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_arm64/${BINARY} main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a ${LDFLAGS} -o build/Linux_arm64/${BINARY} main.go
 
 build-ppc64le:
-	GOOS=linux GOARCH=ppc64le go build -a -installsuffix cgo ${LDFLAGS} -o build/Linux_ppc64le/${BINARY} main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -a ${LDFLAGS} -o build/Linux_ppc64le/${BINARY} main.go
 
 release: build-docker
 	VERSION=${VERSION} BINARY=${BINARY} ./release.sh
