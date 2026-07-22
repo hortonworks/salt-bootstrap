@@ -85,6 +85,47 @@ func TestDetermineHttpPortCustom(t *testing.T) {
 	}
 }
 
+func TestHttpsOnlyDefault(t *testing.T) {
+	result := HttpsOnly()
+
+	if result {
+		t.Errorf("HTTPS-only mode should be disabled by default")
+	}
+}
+
+func TestHttpsOnlyEnabled(t *testing.T) {
+	os.Setenv(httpsOnlyKey, "true")
+	defer os.Unsetenv(httpsOnlyKey)
+
+	result := HttpsOnly()
+
+	if !result {
+		t.Errorf("HTTPS-only mode should be enabled when env var is 'true'")
+	}
+}
+
+func TestHttpsOnlyDisabledExplicitly(t *testing.T) {
+	os.Setenv(httpsOnlyKey, "false")
+	defer os.Unsetenv(httpsOnlyKey)
+
+	result := HttpsOnly()
+
+	if result {
+		t.Errorf("HTTPS-only mode should be disabled when env var is 'false'")
+	}
+}
+
+func TestHttpsOnlyEnabledCaseInsensitive(t *testing.T) {
+	os.Setenv(httpsOnlyKey, "True")
+	defer os.Unsetenv(httpsOnlyKey)
+
+	result := HttpsOnly()
+
+	if !result {
+		t.Errorf("HTTPS-only mode should be enabled when env var is 'True'")
+	}
+}
+
 func TestGetHttpsConfigDefault(t *testing.T) {
 	httpsConfig := GetHttpsConfig()
 

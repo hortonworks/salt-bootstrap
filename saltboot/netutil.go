@@ -13,6 +13,7 @@ import (
 
 const (
 	httpsEnabledKey        = "SALTBOOT_HTTPS_ENABLED"
+	httpsOnlyKey           = "SALTBOOT_HTTPS_ONLY"
 	portKey                = "SALTBOOT_PORT"
 	defaultPort            = 7070
 	httpsPortKey           = "SALTBOOT_HTTPS_PORT"
@@ -135,6 +136,12 @@ func HttpsEnabled() bool {
 	httpsEnabled := os.Getenv(httpsEnabledKey)
 	log.Printf("[HttpsEnabled] %s: %s", httpsEnabledKey, httpsEnabled)
 	return httpsEnabled != "" && strings.ToLower(httpsEnabled) != "false"
+}
+
+func HttpsOnly() bool {
+	httpsOnly := os.Getenv(httpsOnlyKey)
+	log.Printf("[HttpsOnly] %s: %s", httpsOnlyKey, httpsOnly)
+	return httpsOnly != "" && strings.ToLower(httpsOnly) != "false"
 }
 
 func DetermineHttpsPort() int {
