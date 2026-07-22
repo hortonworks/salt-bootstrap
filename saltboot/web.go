@@ -62,6 +62,7 @@ func NewCloudbreakBootstrapWeb() {
 	r.Handle(FileDistributeEP, authenticator.Wrap(FileUploadDistributeHandler, SIGNED)).Methods("POST")
 
 	httpsEnabled := HttpsEnabled()
+	httpsOnly := HttpsOnly()
 	httpsServerExit := make(chan bool)
 	if httpsEnabled {
 		go func() {
@@ -89,17 +90,22 @@ func NewCloudbreakBootstrapWeb() {
 		}()
 	}
 
-	httpAddress := fmt.Sprintf(":%d", DetermineHttpPort())
-	server := &http.Server{
-		Addr:    httpAddress,
-		Handler: r,
-	}
-	log.Printf("[web] starting server at address: %s", httpAddress)
-	if err := server.ListenAndServe(); err != nil {
-		log.Printf("[web] [ERROR] unable to ListenAndServe: %s", err.Error())
-	}
-
-	if httpsEnabled {
+	if httpsEnabled && httpsOnly {
+		log.Println("[web] HTTPS-only mode enabled, skipping HTTP listener")
 		<-httpsServerExit
+	} else {
+		httpAddress := fmt.Sprintf(":%d", DetermineHttpPort())
+		server := &http.Server{
+			Addr:    httpAddress,
+			Handler: r,
+		}
+		log.Printf("[web] starting server at address: %s", httpAddress)
+		if err := server.ListenAndServe(); err != nil {
+			log.Printf("[web] [ERROR] unable to ListenAndServe: %s", err.Error())
+		}
+
+		if httpsEnabled {
+			<-httpsServerExit
+		}
 	}
 }
