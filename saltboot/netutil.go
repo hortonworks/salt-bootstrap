@@ -44,11 +44,12 @@ var tlsVersionMap = map[string]uint16{
 	"1.3": tls.VersionTLS13,
 }
 
-/**
- * This slice matches the list of cipher suites specified in https://pkg.go.dev/crypto/tls@go1.14.3#pkg-constants
- * Only the TLS 1.0-1.2 cipher suites are listed, since according to the go documentation "...TLS 1.3 ciphersuites are not configurable."
- */
 var cipherSuiteMap = map[string]uint16{
+	// TLS 1.3 cipher suites (configurable since Go 1.23)
+	"TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
+	"TLS_AES_256_GCM_SHA384":       tls.TLS_AES_256_GCM_SHA384,
+	"TLS_CHACHA20_POLY1305_SHA256": tls.TLS_CHACHA20_POLY1305_SHA256,
+	// TLS 1.0-1.2 cipher suites
 	"TLS_RSA_WITH_RC4_128_SHA":                      tls.TLS_RSA_WITH_RC4_128_SHA,
 	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":                 tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 	"TLS_RSA_WITH_AES_128_CBC_SHA":                  tls.TLS_RSA_WITH_AES_128_CBC_SHA,
