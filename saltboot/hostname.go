@@ -23,7 +23,7 @@ func getFQDN() (string, error) {
 
 func constructFQDN(hostName, domain string) string {
 	var fqdn string
-	if strings.Contains(hostName, domain) {
+	if hostName == domain || strings.HasSuffix(hostName, "."+domain) {
 		fqdn = hostName
 	} else {
 		fqdn = hostName + "." + domain
@@ -53,14 +53,14 @@ func setHostname(hostName string) (string, error) {
 }
 
 // This is required due to: https://github.com/saltstack/salt/issues/32719
-func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4address string, os *Os, cloud *Cloud) error {
+func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4address string, os *Os, cloud *Cloud) (string, error) {
 	var hostName string
 	if customHostname != nil && len(*customHostname) > 0 {
 		log.Printf("[ensureHostIsResolvable] use custom hostname: %s", *customHostname)
 		hostName = *customHostname
 	} else {
 		if hn, hostNameErr := getHostName(); hostNameErr != nil {
-			return hostNameErr
+			return "", hostNameErr
 		} else {
 			log.Printf("[ensureHostIsResolvable] default hostName: %s", hn)
 			hostName = hn
@@ -77,9 +77,9 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 			if isCloud(AZURE, cloud) {
 				log.Printf("[ensureHostIsResolvable] cloud type is '%s', default domain is expected", cloud.Name)
 				if domainError != nil {
-					return domainError
+					return "", domainError
 				} else {
-					return errors.New("it is expected to have a default domain, but it is empty")
+					return "", errors.New("it is expected to have a default domain, but it is empty")
 				}
 			} else {
 				log.Printf("[ensureHostIsResolvable] use '%s' as default domain", EXAMPLE_DOMAIN)
@@ -93,7 +93,7 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 
 	if err := updateHostsFile(hostName, domain, HOSTS_FILE, ipv4address); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host file: %s", err.Error())
-		return err
+		return "", err
 	}
 	networkSysConfig := NETWORK_SYSCONFIG_FILE
 	if isOs(os, SUSE, SLES12) {
@@ -101,13 +101,13 @@ func ensureHostIsResolvable(customHostname *string, customDomain string, ipv4add
 	}
 	if err := updateSysConfig(hostName, domain, networkSysConfig); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update sys config: %s", err.Error())
-		return err
+		return "", err
 	}
 	if err := updateHostNameFile(hostName, HOSTNAME_FILE); err != nil {
 		log.Printf("[ensureHostIsResolvable] [ERROR] unable to update host name: %s", err.Error())
-		return err
+		return "", err
 	}
-	return nil
+	return constructFQDN(hostName, domain), nil
 }
 
 func updateHostsFile(hostName, domain string, file string, ipv4address string) error {

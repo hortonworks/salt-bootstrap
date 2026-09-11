@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hortonworks/salt-bootstrap/saltboot/model"
 	"gopkg.in/yaml.v2"
@@ -66,6 +68,7 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	defer func() { watchCommands = false }()
 
 	tempDirName, _ := os.MkdirTemp("", "saltminionruntest")
+	defer os.RemoveAll(tempDirName)
 	hostname := "testhostname.example.com"
 
 	request := SaltActionRequest{
@@ -86,29 +89,10 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 	req.Header.Set("salt-minion-base-dir", tempDirName)
 	w := httptest.NewRecorder()
 
-	go func() {
-		SaltMinionRunRequestHandler(w, req)
+	go SaltMinionRunRequestHandler(w, req)
 
-		if _, err := os.Stat(tempDirName + "/etc/salt/minion.d"); os.IsNotExist(err) {
-			t.Errorf("missing minion dir %s", tempDirName+"/etc/salt/minion.d")
-		}
-
-		content, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
-		var masters map[string][]string
-		yaml.Unmarshal(content, &masters)
-		expected := map[string][]string{"master": {"server"}}
-		if masters["master"][0] != expected["master"][0] {
-			t.Errorf("master config not match %s == %s", expected, string(content))
-		}
-
-		grainYaml, _ := os.ReadFile(tempDirName + "/etc/salt/grains")
-		err := yaml.Unmarshal(grainYaml, &GrainConfig{})
-		if err != nil {
-			t.Errorf("couldn't unmarshall grain yaml: %s", err)
-		}
-		os.RemoveAll(tempDirName)
-	}()
-
+	// The handler writes its config files before launching the minion, so once
+	// the launch commands have flowed through, the files are guaranteed present.
 	checkExecutedCommands([]string{
 		"hostname -d",
 		"hostname testhostname.example.com",
@@ -118,6 +102,113 @@ func TestSaltMinionRunRequestHandler(t *testing.T) {
 		"/bin/systemctl start salt-minion",
 		"/bin/systemctl enable salt-minion",
 	}, t)
+
+	if _, err := os.Stat(tempDirName + "/etc/salt/minion.d"); os.IsNotExist(err) {
+		t.Errorf("missing minion dir %s", tempDirName+"/etc/salt/minion.d")
+	}
+
+	content, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/master.conf")
+	var masters map[string][]string
+	yaml.Unmarshal(content, &masters)
+	expectedMaster := map[string][]string{"master": {"server"}}
+	if masters["master"][0] != expectedMaster["master"][0] {
+		t.Errorf("master config not match %s == %s", expectedMaster, string(content))
+	}
+
+	grainYaml, _ := os.ReadFile(tempDirName + "/etc/salt/grains")
+	if err := yaml.Unmarshal(grainYaml, &GrainConfig{}); err != nil {
+		t.Errorf("couldn't unmarshall grain yaml: %s", err)
+	}
+
+	idContent, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/minion_id.conf")
+	var idConf map[string]string
+	yaml.Unmarshal(idContent, &idConf)
+	if idConf["id"] != "testhostname.example.com" {
+		t.Errorf("minion id not pinned, expected testhostname.example.com, got %q (raw: %s)", idConf["id"], string(idContent))
+	}
+}
+
+// drainCommands collects every command pushed onto the watch channel until no
+// new command arrives within timeout, then returns them. It lets a test assert
+// over the full command set without deadlocking when an expected command is
+// (incorrectly) never emitted.
+func drainCommands(timeout time.Duration) []string {
+	var cmds []string
+	for {
+		select {
+		case c := <-commands:
+			cmds = append(cmds, c)
+		case <-time.After(timeout):
+			return cmds
+		}
+	}
+}
+
+func containsCommand(cmds []string, target string) bool {
+	for _, c := range cmds {
+		if c == target {
+			return true
+		}
+	}
+	return false
+}
+
+func TestSaltMinionRunRequestHandlerRestartsOnIdDrift(t *testing.T) {
+	watchCommands = true
+	defer func() { watchCommands = false }()
+
+	// Report salt-minion as already running so the launch decision is observable:
+	// a no-op LaunchService emits no systemctl command, a restart emits one.
+	originalExec := commandExecutor
+	commandExecutor = func(executable string, args ...string) ([]byte, error) {
+		command := executable
+		if len(args) != 0 {
+			command += " " + strings.Join(args, " ")
+		}
+		if watchCommands {
+			commands <- command
+		}
+		if executable == "ps" {
+			return []byte("salt-minion is running"), nil
+		}
+		return make([]byte, 0), nil
+	}
+	defer func() { commandExecutor = originalExec }()
+
+	tempDirName, _ := os.MkdirTemp("", "saltminiondrifttest")
+	defer os.RemoveAll(tempDirName)
+	// A minion already cached a stale (cloud-default) id before saltboot ran.
+	os.MkdirAll(tempDirName+"/etc/salt", 0755)
+	os.WriteFile(tempDirName+"/etc/salt/minion_id", []byte("stale.internal.cloudapp.net"), 0644)
+
+	hostname := "testhostname.example.com"
+	request := SaltActionRequest{
+		Master: SaltMaster{Address: "address"},
+		Minions: []SaltMinion{{
+			Address:   "address",
+			HostGroup: "group",
+			Server:    "server",
+			Hostname:  &hostname,
+			Roles:     []string{"role1", "role2"},
+		}},
+	}
+	body := bytes.NewBuffer(make([]byte, 0))
+	json.NewEncoder(body).Encode(&request)
+
+	req := httptest.NewRequest("POST", "/?index=0", body)
+	req.Header.Set("salt-minion-base-dir", tempDirName)
+	w := httptest.NewRecorder()
+
+	go SaltMinionRunRequestHandler(w, req)
+
+	executed := drainCommands(time.Second)
+
+	if !containsCommand(executed, "/bin/systemctl restart salt-minion") {
+		t.Errorf("expected salt-minion restart on id drift, got commands: %v", executed)
+	}
+	if containsCommand(executed, "/bin/systemctl start salt-minion") {
+		t.Errorf("expected restart (not start) on id drift, got commands: %v", executed)
+	}
 }
 
 func TestSaltMinionStopRequestHandler(t *testing.T) {
@@ -221,5 +312,106 @@ func TestWritePillar(t *testing.T) {
 	content, _ := os.ReadFile(tempDirName + "/srv/pillar" + pillar.Path)
 	if string(content) != expected {
 		t.Errorf("yml content not match %s == %s", expected, string(content))
+	}
+}
+
+func TestEnsureMinionIdWritesIdConfig(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+
+	if _, err := ensureMinionId(tempDirName, "host-1.example.com"); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	content, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/minion_id.conf")
+	var conf map[string]string
+	yaml.Unmarshal(content, &conf)
+	if conf["id"] != "host-1.example.com" {
+		t.Errorf("expected id host-1.example.com, got %q (raw: %s)", conf["id"], string(content))
+	}
+}
+
+func TestEnsureMinionIdNoDriftWhenNoCache(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+
+	changed, _ := ensureMinionId(tempDirName, "host-1.example.com")
+	if changed {
+		t.Errorf("expected no drift when no cached minion_id exists")
+	}
+}
+
+func TestEnsureMinionIdDetectsDrift(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+	os.WriteFile(tempDirName+"/etc/salt/minion_id", []byte("stale.internal.cloudapp.net\n"), 0644)
+
+	changed, _ := ensureMinionId(tempDirName, "host-1.example.com")
+	if !changed {
+		t.Errorf("expected drift when cached minion_id differs from desired id")
+	}
+}
+
+func TestEnsureMinionIdConvergesCacheToAvoidRepeatRestart(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+	os.WriteFile(tempDirName+"/etc/salt/minion_id", []byte("stale.internal.cloudapp.net\n"), 0644)
+
+	// First run: stale cache -> drift -> the running minion must restart.
+	first, _ := ensureMinionId(tempDirName, "host-1.example.com")
+	if !first {
+		t.Fatalf("expected drift on first run with a stale cached minion_id")
+	}
+
+	// salt does not rewrite /etc/salt/minion_id once `id:` is statically defined,
+	// so saltboot must converge the cache itself. Otherwise every later run keeps
+	// seeing the stale cache as drift and restarts the minion every time.
+	second, _ := ensureMinionId(tempDirName, "host-1.example.com")
+	if second {
+		t.Errorf("expected no drift on second run; cache should have converged to the pinned id")
+	}
+	cached, _ := os.ReadFile(tempDirName + "/etc/salt/minion_id")
+	if strings.TrimSpace(string(cached)) != "host-1.example.com" {
+		t.Errorf("expected cached minion_id to converge to host-1.example.com, got %q", string(cached))
+	}
+}
+
+func TestEnsureMinionIdNoDriftWhenCacheMatches(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+	os.WriteFile(tempDirName+"/etc/salt/minion_id", []byte("host-1.example.com\n"), 0644)
+
+	changed, _ := ensureMinionId(tempDirName, "host-1.example.com")
+	if changed {
+		t.Errorf("expected no drift when cached minion_id matches desired id")
+	}
+}
+
+func TestEnsureMinionIdAssumesDriftWhenCacheUnreadable(t *testing.T) {
+	tempDirName, _ := os.MkdirTemp("", "minionidtest")
+	defer os.RemoveAll(tempDirName)
+	os.MkdirAll(tempDirName+"/etc/salt/minion.d", 0755)
+	// A directory where the cache file is expected makes the read fail with a
+	// non-NotExist error; the pin still succeeds, so provisioning must not fail.
+	os.MkdirAll(tempDirName+"/etc/salt/minion_id", 0755)
+
+	changed, err := ensureMinionId(tempDirName, "host-1.example.com")
+	if err != nil {
+		t.Fatalf("an unreadable minion_id cache must not fail ensureMinionId, got: %s", err)
+	}
+	if !changed {
+		t.Errorf("expected drift to be assumed (restart) when the cached minion_id is unreadable")
+	}
+
+	content, _ := os.ReadFile(tempDirName + "/etc/salt/minion.d/minion_id.conf")
+	var conf map[string]string
+	yaml.Unmarshal(content, &conf)
+	if conf["id"] != "host-1.example.com" {
+		t.Errorf("expected id still pinned to host-1.example.com, got %q (raw: %s)", conf["id"], string(content))
 	}
 }
