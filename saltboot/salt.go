@@ -129,6 +129,50 @@ func distributeActionImpl(distributeActionRequest func([]string, string, string,
 	return result
 }
 
+func ensureMinionId(baseDir, fqdn string) (bool, error) {
+	// Pinning the id is the only essential write: without it the minion falls
+	// back to its FQDN-derived default, so a failure here must fail the request.
+	if err := writeStaticMinionIdConfig(baseDir, fqdn); err != nil {
+		return false, err
+	}
+	// The cache is only a best-effort restart signal (salt freezes it once id: is
+	// pinned), so never fail provisioning over it: an unreadable cache means
+	// "assume drift and restart", which is always safe and self-correcting.
+	minionRestartNeeded, cacheErr := cachedMinionIdDiffersFrom(baseDir, fqdn)
+	if cacheErr != nil {
+		log.Printf("[ensureMinionId] [WARN] unable to read cached minion_id, assuming drift: %s", cacheErr)
+		minionRestartNeeded = true
+	}
+	return minionRestartNeeded, nil
+}
+
+// writeStaticMinionIdConfig pins the id via an `id:` setting under minion.d,
+// which salt prefers over its FQDN-derived default and the cached minion_id.
+func writeStaticMinionIdConfig(baseDir, fqdn string) error {
+	idConf, err := yaml.Marshal(map[string]string{"id": fqdn})
+	if err != nil {
+		return err
+	}
+	return WriteFile(baseDir+"/etc/salt/minion.d/minion_id.conf", idConf, 0644)
+}
+
+// cachedMinionIdDiffersFrom reports whether a minion has already cached an id
+// other than fqdn. A missing cache means no id was pinned yet, so it is not drift.
+func cachedMinionIdDiffersFrom(baseDir, fqdn string) (bool, error) {
+	cached, err := os.ReadFile(baseDir + "/etc/salt/minion_id")
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(string(cached)) != fqdn, nil
+}
+
+func overwriteCachedMinionId(baseDir, fqdn string) error {
+	return WriteFile(baseDir+"/etc/salt/minion_id", []byte(fqdn+"\n"), 0644)
+}
+
 func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
 
@@ -159,7 +203,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		saltMinion.Domain = saltActionRequest.Master.Domain
 	}
 
-	err = ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain, saltMinion.Address, saltActionRequest.OS, saltActionRequest.Cloud)
+	fqdn, err := ensureHostIsResolvable(saltMinion.Hostname, saltMinion.Domain, saltMinion.Address, saltActionRequest.OS, saltActionRequest.Cloud)
 	if err != nil {
 		log.Printf("[SaltMinionRunRequestHandler] [ERROR] unable to set the fqdn: %s", err.Error())
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
@@ -197,6 +241,14 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		resp.WriteHttp(w)
 		return
 	}
+
+	minionIdRestartNeeded, err := ensureMinionId(baseDir, fqdn)
+	if err != nil {
+		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
+		resp.WriteHttp(w)
+		return
+	}
+	restartNeeded = restartNeeded || minionIdRestartNeeded
 
 	grainConfigPath := baseDir + "/etc/salt/grains"
 	prewarmedRolesPath := baseDir + "/etc/salt/prewarmed_roles"
@@ -236,12 +288,21 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("[SaltMinionRunRequestHandler] execute salt-minion run request")
 	if restartNeeded {
-		resp, _ = RestartService("salt-minion")
-		resp.WriteHttp(w)
+		resp, err = RestartService("salt-minion")
 	} else {
-		resp, _ = LaunchService("salt-minion")
-		resp.WriteHttp(w)
+		resp, err = LaunchService("salt-minion")
 	}
+	if err != nil {
+		resp.WriteHttp(w)
+		return
+	}
+
+	// Salt does not refresh the cache for a static id. Preserve drift until all
+	// configuration and service operations succeed so failures remain retryable.
+	if err := overwriteCachedMinionId(baseDir, fqdn); err != nil {
+		log.Printf("[SaltMinionRunRequestHandler] [WARN] unable to converge cached minion_id: %s", err)
+	}
+	resp.WriteHttp(w)
 }
 
 func SaltMinionStopRequestHandler(w http.ResponseWriter, req *http.Request) {
@@ -304,7 +365,7 @@ func SaltServerRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 
 	var resp model.Response
 
-	if err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain, saltMaster.Address, saltActionRequest.OS, saltActionRequest.Cloud); err != nil {
+	if _, err := ensureHostIsResolvable(saltMaster.Hostname, saltMaster.Domain, saltMaster.Address, saltActionRequest.OS, saltActionRequest.Cloud); err != nil {
 		log.Printf("[SaltServerRunRequestHandler] [ERROR] unable to set the fqdn: %s", err.Error())
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
