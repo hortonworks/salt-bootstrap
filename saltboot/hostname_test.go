@@ -220,6 +220,17 @@ func TestHostsFileWriteExistingWithDefaultDomain(t *testing.T) {
 	}
 }
 
+func TestEnsureHostIsResolvableReturnsFQDN(t *testing.T) {
+	host := "host-1"
+	fqdn, err := ensureHostIsResolvable(&host, "example.com", "10.0.0.1", nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if fqdn != "host-1.example.com" {
+		t.Errorf("expected fqdn host-1.example.com, got %q", fqdn)
+	}
+}
+
 func TestCreateFQDN(t *testing.T) {
 	fqdn := constructFQDN("hostname-1.example.com", "example.com")
 	if fqdn != "hostname-1.example.com" {
@@ -229,6 +240,21 @@ func TestCreateFQDN(t *testing.T) {
 	fqdn = constructFQDN("hostname-2", "example.com")
 	if fqdn != "hostname-2.example.com" {
 		t.Errorf("fqdn does not match, expected: %s, got: %s", "hostname-2.example.com", fqdn)
+	}
+}
+
+func TestConstructFQDNAppendsDomainWhenHostnameMerelyContainsIt(t *testing.T) {
+	// "myexample.com-1" contains "example.com" as a substring but is not in the
+	// domain, so the domain must still be appended.
+	fqdn := constructFQDN("myexample.com-1", "example.com")
+	if fqdn != "myexample.com-1.example.com" {
+		t.Errorf("fqdn does not match, expected: %s, got: %s", "myexample.com-1.example.com", fqdn)
+	}
+
+	// A host whose name equals the domain is already fully qualified.
+	fqdn = constructFQDN("example.com", "example.com")
+	if fqdn != "example.com" {
+		t.Errorf("fqdn does not match, expected: %s, got: %s", "example.com", fqdn)
 	}
 }
 
