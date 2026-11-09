@@ -223,3 +223,103 @@ func TestWritePillar(t *testing.T) {
 		t.Errorf("yml content not match %s == %s", expected, string(content))
 	}
 }
+
+func TestSaltMinionRunRequestHandlerRestartsWhenMasterRemoved(t *testing.T) {
+	// RestartService checks the process list and then calls LaunchService, which checks it again,
+	// so the restart path shows two "ps aux" calls.
+	runSaltMinionRunRequestWithMasters(t, "master:\n- 10.0.0.1\n- 10.0.0.2\n- 10.0.0.3\n", []string{"10.0.0.1", "10.0.0.2"}, []string{
+		"hostname -d",
+		"hostname testhostname.example.com",
+		"grep SUSE /etc/issue",
+		"grep sles12 /etc/issue",
+		"ps aux",
+		"ps aux",
+		"/bin/systemctl start salt-minion",
+		"/bin/systemctl enable salt-minion",
+	})
+}
+
+func TestSaltMinionRunRequestHandlerLaunchesWhenMasterListUnchanged(t *testing.T) {
+	runSaltMinionRunRequestWithMasters(t, "master:\n- 10.0.0.1\n- 10.0.0.2\n", []string{"10.0.0.2", "10.0.0.1"}, []string{
+		"hostname -d",
+		"hostname testhostname.example.com",
+		"grep SUSE /etc/issue",
+		"grep sles12 /etc/issue",
+		"ps aux",
+		"/bin/systemctl start salt-minion",
+		"/bin/systemctl enable salt-minion",
+	})
+}
+
+func runSaltMinionRunRequestWithMasters(t *testing.T, originalMasterConf string, servers []string, expectedCommands []string) {
+	watchCommands = true
+	defer func() { watchCommands = false }()
+
+	baseDir := t.TempDir()
+	if err := os.MkdirAll(baseDir+"/etc/salt/minion.d", 0755); err != nil {
+		t.Fatalf("failed to create minion dir: %s", err)
+	}
+	if err := os.WriteFile(baseDir+"/etc/salt/minion.d/master.conf", []byte(originalMasterConf), 0644); err != nil {
+		t.Fatalf("failed to write master conf: %s", err)
+	}
+	hostname := "testhostname.example.com"
+	request := SaltActionRequest{
+		Master:  SaltMaster{Address: servers[0]},
+		Minions: []SaltMinion{{Address: "address", HostGroup: "group", Hostname: &hostname, Servers: servers}},
+	}
+	body := bytes.NewBuffer(make([]byte, 0))
+	json.NewEncoder(body).Encode(&request)
+	req := httptest.NewRequest("POST", "/?index=0", body)
+	req.Header.Set("salt-minion-base-dir", baseDir)
+
+	done := make(chan struct{})
+	go func() {
+		SaltMinionRunRequestHandler(httptest.NewRecorder(), req)
+		close(done)
+	}()
+
+	checkExecutedCommands(expectedCommands, t)
+	<-done
+}
+
+func TestIsSaltMasterListChanged(t *testing.T) {
+	testCases := []struct {
+		name        string
+		fileContent *string
+		servers     []string
+		expected    bool
+	}{
+		{name: "identical list", fileContent: strPtr("master:\n- 10.0.0.1\n- 10.0.0.2\n"), servers: []string{"10.0.0.1", "10.0.0.2"}, expected: false},
+		{name: "same members in different order", fileContent: strPtr("master:\n- 10.0.0.1\n- 10.0.0.2\n- 10.0.0.3\n"), servers: []string{"10.0.0.3", "10.0.0.1", "10.0.0.2"}, expected: false},
+		{name: "one master added", fileContent: strPtr("master:\n- 10.0.0.1\n"), servers: []string{"10.0.0.1", "10.0.0.2"}, expected: true},
+		{name: "one master removed", fileContent: strPtr("master:\n- 10.114.128.57\n- 10.114.129.88\n- 10.114.129.67\n"), servers: []string{"10.114.129.67", "10.114.129.88"}, expected: true},
+		{name: "one master replaced", fileContent: strPtr("master:\n- 10.0.0.1\n- 10.0.0.2\n"), servers: []string{"10.0.0.1", "10.0.0.3"}, expected: true},
+		{name: "duplicates in new list with same members", fileContent: strPtr("master:\n- 10.0.0.1\n- 10.0.0.2\n"), servers: []string{"10.0.0.2", "10.0.0.1", "10.0.0.2"}, expected: false},
+		{name: "empty original master list", fileContent: strPtr("master: []\n"), servers: []string{"10.0.0.1"}, expected: true},
+		{name: "master as scalar string", fileContent: strPtr("master: 10.0.0.1\n"), servers: []string{"10.0.0.2"}, expected: false},
+		{name: "file missing", fileContent: nil, servers: []string{"10.0.0.1"}, expected: false},
+		{name: "file empty", fileContent: strPtr(""), servers: []string{"10.0.0.1"}, expected: false},
+		{name: "invalid yaml", fileContent: strPtr("master: [10.0.0.1\n"), servers: []string{"10.0.0.1"}, expected: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			masterConfPath := t.TempDir() + "/master.conf"
+			if tc.fileContent != nil {
+				if err := os.WriteFile(masterConfPath, []byte(*tc.fileContent), 0644); err != nil {
+					t.Fatalf("failed to write master conf: %s", err)
+				}
+			}
+
+			actual := isSaltMasterListChanged(masterConfPath, tc.servers)
+
+			if actual != tc.expected {
+				t.Errorf("isSaltMasterListChanged() = %v, expected %v", actual, tc.expected)
+			}
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}

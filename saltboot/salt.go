@@ -176,6 +176,7 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	masterConfPath := baseDir + "/etc/salt/minion.d/master.conf"
 	var masterConf []byte
 	servers := saltMinion.Servers
 	var restartNeeded bool
@@ -183,14 +184,14 @@ func SaltMinionRunRequestHandler(w http.ResponseWriter, req *http.Request) {
 	if servers != nil && len(servers) > 0 {
 		log.Printf("[SaltMinionRunRequestHandler] salt master list: %s", servers)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": servers})
-		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterIpDiffers(servers)
+		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterListChanged(masterConfPath, servers)
 	} else {
 		log.Printf("[SaltMinionRunRequestHandler] salt master (depricated): %s", saltMinion.Server)
 		masterConf, _ = yaml.Marshal(map[string][]string{"master": {saltMinion.Server}})
-		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterIpDiffers([]string{saltMinion.Server})
+		restartNeeded = saltMinion.IsRestartNeeded() || isSaltMasterListChanged(masterConfPath, []string{saltMinion.Server})
 	}
 
-	err = WriteFile(baseDir+"/etc/salt/minion.d/master.conf", masterConf, 0644)
+	err = WriteFile(masterConfPath, masterConf, 0644)
 	if err != nil {
 		resp = model.Response{ErrorText: err.Error(), StatusCode: http.StatusInternalServerError}
 		resp.WriteHttp(w)
@@ -537,31 +538,50 @@ func shouldAppendPrewarmedRoles(prewarmRoleLocation string) bool {
 	return true
 }
 
-func isSaltMasterIpDiffers(servers []string) bool {
-	log.Println("[isSaltMasterIpDiffers] check whether salt-minion requires restart")
-	masterConfFile := "/etc/salt/minion.d/master.conf"
-	b, err := os.ReadFile(masterConfFile)
-	if err == nil && len(b) > 0 {
+// isSaltMasterListChanged reads the current salt-master list from masterConfPath and reports whether it
+// differs from servers as a set, i.e. whether any master was added or removed. Order and duplicates are ignored.
+// It must be called before masterConfPath is overwritten with the new list. A missing, empty or unparsable
+// file yields false.
+func isSaltMasterListChanged(masterConfPath string, servers []string) bool {
+	log.Println("[isSaltMasterListChanged] check whether salt-minion requires restart")
+	b, err := os.ReadFile(masterConfPath)
+	if err != nil || len(b) == 0 {
+		log.Println("[isSaltMasterListChanged] there is no original salt-master config, no restart needed")
+		return false
+	} else {
 		var saltMasterIps = make(map[string][]string)
 		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
-			log.Printf("[isSaltMasterIpDiffers] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
+			log.Printf("[isSaltMasterListChanged] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
 			return false
-		}
-		ipList := saltMasterIps["master"]
-		log.Printf("[isSaltMasterIpDiffers] original master IP list: %s", ipList)
-		for _, server := range servers {
-			newMaster := true
-			for _, ip := range ipList {
-				if ip == server {
-					newMaster = false
-				}
-			}
-			if newMaster {
-				log.Printf("[isSaltMasterIpDiffers] found new salt-master: %s, restart needed", server)
+		} else {
+			ipList := saltMasterIps["master"]
+			log.Printf("[isSaltMasterListChanged] original master IP list: %s", ipList)
+
+			added := missingFrom(servers, ipList)
+			removed := missingFrom(ipList, servers)
+			if len(added) > 0 || len(removed) > 0 {
+				log.Printf("[isSaltMasterListChanged] salt-master list changed, added: %s, removed: %s, restart needed", added, removed)
 				return true
+			} else {
+				log.Println("[isSaltMasterListChanged] salt-master list is unchanged")
+				return false
 			}
 		}
 	}
-	log.Println("[isSaltMasterIpDiffers] there is no new salt-master")
-	return false
+}
+
+// missingFrom returns the distinct elements of items that are not present in reference, in their original order.
+func missingFrom(items []string, reference []string) []string {
+	known := make(map[string]bool, len(reference))
+	for _, r := range reference {
+		known[r] = true
+	}
+	missing := make([]string, 0)
+	for _, item := range items {
+		if !known[item] {
+			missing = append(missing, item)
+			known[item] = true
+		}
+	}
+	return missing
 }
