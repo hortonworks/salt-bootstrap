@@ -2,6 +2,7 @@ package saltboot
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"fmt"
 	"io"
@@ -60,6 +62,105 @@ func sendRequestWithFallback(httpClient *http.Client, request *http.Request, htt
 	return request.URL.Host, resp, err
 }
 
+// sendDistributedRequest sends one fan-out request to client, signed with the client's index when the
+// request body carries a signature.
+func sendDistributedRequest(ctx context.Context, httpClient *http.Client, client string, index int, protocol, endpoint, user, pass string,
+	requestBody RequestBody, httpsEnabled bool) (string, *http.Response, error) {
+	log.Printf("[DistributeRequest] Send request to client: %s", client)
+
+	var clientAddr string
+	if strings.Contains(client, ":") {
+		clientAddr = client
+	} else {
+		clientAddr = client + ":" + strconv.Itoa(DetermineBootstrapPort(httpsEnabled))
+	}
+
+	var req *http.Request
+	if len(requestBody.Signature) > 0 {
+		indexString := strconv.Itoa(index)
+		log.Printf("[DistributeRequest] Send signed request to client: %s with index: %s", client, indexString)
+		req, _ = http.NewRequestWithContext(ctx, "POST", protocol+clientAddr+endpoint+"?index="+indexString, bytes.NewBufferString(requestBody.SignedPayload))
+		req.Header.Set(SIGNATURE, requestBody.Signature)
+	} else {
+		log.Printf("[DistributeRequest] Send plain request to client: %s", client)
+		req, _ = http.NewRequestWithContext(ctx, "POST", protocol+clientAddr+endpoint, bytes.NewBuffer(requestBody.PlainPayload))
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(user, pass)
+
+	return sendRequestWithFallback(httpClient, req, httpsEnabled)
+}
+
+// RawResponse is the undecoded result of one fan-out request. Err is set when the target could not be reached
+// or did not answer within the timeout. ContactedAt is when the request was about to be sent, which with a limit on
+// the parallel targets is later for the targets that waited for a free slot.
+type RawResponse struct {
+	Address     string
+	StatusCode  int
+	Body        []byte
+	Err         error
+	ContactedAt time.Time
+}
+
+// DistributeRawRequest works like DistributeRequest, but bounds each target with timeout, contacts at most
+// maxParallel targets at a time and leaves the response body to the caller to decode. The targets are started in the
+// order given; the timeout of a target only starts once it is contacted, so waiting for a free slot does not count.
+func DistributeRawRequest(clients []string, endpoint, user, pass string, requestBody RequestBody, timeout time.Duration, maxParallel int) <-chan RawResponse {
+	httpsEnabled := HttpsEnabled()
+	protocol := determineProtocol(httpsEnabled)
+	c := make(chan RawResponse, len(clients))
+	if maxParallel <= 0 || maxParallel > len(clients) {
+		maxParallel = len(clients)
+	}
+
+	type target struct {
+		client string
+		index  int
+	}
+	targets := make(chan target, len(clients))
+	for idx, client := range clients {
+		targets <- target{client, idx}
+	}
+	close(targets)
+
+	var wg sync.WaitGroup
+	wg.Add(maxParallel)
+	for worker := 0; worker < maxParallel; worker++ {
+		go func() {
+			defer wg.Done()
+			for t := range targets {
+				c <- sendRawRequest(t.client, t.index, protocol, endpoint, user, pass, requestBody, httpsEnabled, timeout)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(c)
+
+	return c
+}
+
+func sendRawRequest(client string, index int, protocol, endpoint, user, pass string, requestBody RequestBody, httpsEnabled bool,
+	timeout time.Duration) RawResponse {
+	httpClient := getHttpClient(httpsEnabled)
+	// one deadline for the whole target, so the HTTP fallback after a refused HTTPS attempt cannot double it
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	contactedAt := time.Now()
+	respHost, resp, err := sendDistributedRequest(ctx, httpClient, client, index, protocol, endpoint, user, pass, requestBody, httpsEnabled)
+	if err != nil {
+		log.Printf("[DistributeRawRequest] [ERROR] Failed to send request to: %s, error: %s", client, err.Error())
+		return RawResponse{Address: respHost, StatusCode: http.StatusInternalServerError, Err: err, ContactedAt: contactedAt}
+	}
+	defer closeIt(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[DistributeRawRequest] [ERROR] Failed to read response from: %s, error: %s", client, err.Error())
+		return RawResponse{Address: respHost, StatusCode: http.StatusInternalServerError, Err: err, ContactedAt: contactedAt}
+	}
+	return RawResponse{Address: respHost, StatusCode: resp.StatusCode, Body: body, ContactedAt: contactedAt}
+}
+
 func DistributeRequest(clients []string, endpoint, user, pass string, requestBody RequestBody) <-chan model.Response {
 	httpsEnabled := HttpsEnabled()
 	protocol := determineProtocol(httpsEnabled)
@@ -70,30 +171,8 @@ func DistributeRequest(clients []string, endpoint, user, pass string, requestBod
 	for idx, client := range clients {
 		go func(client string, index int) {
 			defer wg.Done()
-			log.Printf("[DistributeRequest] Send request to client: %s", client)
-
-			var clientAddr string
-			if strings.Contains(client, ":") {
-				clientAddr = client
-			} else {
-				clientAddr = client + ":" + strconv.Itoa(DetermineBootstrapPort(httpsEnabled))
-			}
-
-			var req *http.Request
-			if len(requestBody.Signature) > 0 {
-				indexString := strconv.Itoa(index)
-				log.Printf("[DistributeRequest] Send signed request to client: %s with index: %s", client, indexString)
-				req, _ = http.NewRequest("POST", protocol+clientAddr+endpoint+"?index="+indexString, bytes.NewBufferString(requestBody.SignedPayload))
-				req.Header.Set(SIGNATURE, requestBody.Signature)
-			} else {
-				log.Printf("[DistributeRequest] Send plain request to client: %s", client)
-				req, _ = http.NewRequest("POST", protocol+clientAddr+endpoint, bytes.NewBuffer(requestBody.PlainPayload))
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.SetBasicAuth(user, pass)
-
 			httpClient := getHttpClient(httpsEnabled)
-			respHost, resp, err := sendRequestWithFallback(httpClient, req, httpsEnabled)
+			respHost, resp, err := sendDistributedRequest(context.Background(), httpClient, client, index, protocol, endpoint, user, pass, requestBody, httpsEnabled)
 			if err != nil {
 				log.Printf("[DistributeRequest] [ERROR] Failed to send request to: %s, error: %s", client, err.Error())
 				c <- model.Response{StatusCode: http.StatusInternalServerError, ErrorText: err.Error(), Address: respHost}

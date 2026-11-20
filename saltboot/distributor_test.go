@@ -2,14 +2,19 @@ package saltboot
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 type ReadSeekCloser struct {
@@ -201,6 +206,38 @@ func TestDistributeRequest_HttpsEnabled_FallbackToHTTP(t *testing.T) {
 		if !validAddresses[addr] {
 			t.Errorf("Unexpected address in response: %s", addr)
 		}
+	}
+}
+
+func TestDistributeRawRequest_HttpsFallbackSharesTheTimeout(t *testing.T) {
+	os.Setenv("SALTBOOT_HTTPS_ENABLED", "true")
+	defer os.Unsetenv("SALTBOOT_HTTPS_ENABLED")
+	release := make(chan struct{})
+	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-time.After(5 * time.Second):
+		}
+	}))
+	defer httpServer.Close()
+	defer close(release)
+	os.Setenv("SALTBOOT_PORT", strconv.Itoa(httpServer.Listener.Addr().(*net.TCPAddr).Port))
+	defer os.Unsetenv("SALTBOOT_PORT")
+	clients := []string{"127.0.0.1:7071"} // nothing listens on the HTTPS port, so the request falls back to HTTP
+	const timeout = 300 * time.Millisecond
+
+	start := time.Now()
+	results := DistributeRawRequest(clients, "/test-endpoint", "user", "pass", RequestBody{PlainPayload: []byte(`{}`)}, timeout, 1)
+	var responses []RawResponse
+	for res := range results {
+		responses = append(responses, res)
+	}
+
+	if len(responses) != 1 || responses[0].Err == nil || !errors.Is(responses[0].Err, context.DeadlineExceeded) {
+		t.Fatalf("expected one deadline error, got %+v", responses)
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("the fallback attempt ignored the timeout, took %s", elapsed)
 	}
 }
 
@@ -399,5 +436,114 @@ func TestDistributeFileUploadRequest_HttpsEnabled_FallbackToHttp(t *testing.T) {
 		if res["StatusCode"] != http.StatusCreated {
 			t.Errorf("Expected status 201, got %d", res["StatusCode"])
 		}
+	}
+}
+
+func TestDistributeRawRequestTimesOutSlowTargets(t *testing.T) {
+	fast := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"statusCode":200}`))
+	}))
+	defer fast.Close()
+	release := make(chan struct{})
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+	}))
+	defer slow.Close()
+	defer close(release)
+
+	clients := []string{fast.Listener.Addr().String(), slow.Listener.Addr().String()}
+	start := time.Now()
+	results := DistributeRawRequest(clients, "/test-endpoint", "user", "pass", RequestBody{PlainPayload: []byte(`{}`)}, 300*time.Millisecond, 10)
+
+	byAddress := make(map[string]RawResponse)
+	for res := range results {
+		byAddress[res.Address] = res
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("fan-out took %s, the timeout was not applied", elapsed)
+	}
+	if res := byAddress[clients[0]]; res.Err != nil || res.StatusCode != http.StatusOK || string(res.Body) != `{"statusCode":200}` {
+		t.Errorf("unexpected fast response: %+v", res)
+	}
+	if res := byAddress[clients[1]]; res.Err == nil || res.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected a timeout for the slow target, got %+v", res)
+	}
+}
+
+func TestDistributeRawRequestLimitsTheParallelTargets(t *testing.T) {
+	var mu sync.Mutex
+	active, maxActive := 0, 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		active++
+		maxActive = max(maxActive, active)
+		mu.Unlock()
+		time.Sleep(30 * time.Millisecond)
+		mu.Lock()
+		active--
+		mu.Unlock()
+		w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+	clients := make([]string, 12)
+	for i := range clients {
+		clients[i] = server.Listener.Addr().String()
+	}
+
+	answered := 0
+	for res := range DistributeRawRequest(clients, "/test-endpoint", "user", "pass", RequestBody{PlainPayload: []byte(`{}`)}, 5*time.Second, 3) {
+		if res.Err != nil || res.StatusCode != http.StatusOK {
+			t.Errorf("unexpected response: %+v", res)
+		}
+		answered++
+	}
+
+	if answered != 12 || maxActive != 3 {
+		t.Errorf("expected 12 answers with at most 3 targets at a time, got %d answers and %d at a time", answered, maxActive)
+	}
+}
+
+func TestDistributeRawRequestContactsTheTargetsInOrderAndTimesOnlyTheContact(t *testing.T) {
+	var mu sync.Mutex
+	var order []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		order = append(order, r.URL.Query().Get("index"))
+		mu.Unlock()
+		time.Sleep(150 * time.Millisecond)
+		w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+	clients := []string{server.Listener.Addr().String(), server.Listener.Addr().String(), server.Listener.Addr().String()}
+	signed := RequestBody{SignedPayload: `{}`, Signature: "signature"}
+
+	// one at a time, the last target waits 300ms for its turn, longer than the 250ms timeout of its own request
+	for res := range DistributeRawRequest(clients, "/test-endpoint", "user", "pass", signed, 250*time.Millisecond, 1) {
+		if res.Err != nil {
+			t.Errorf("waiting for a slot must not count against the timeout: %v", res.Err)
+		}
+	}
+
+	if strings.Join(order, ",") != "0,1,2" {
+		t.Errorf("expected the targets in request order, got %v", order)
+	}
+}
+
+func TestDistributeRawRequestWithoutALimit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{}`)) }))
+	defer server.Close()
+
+	for _, maxParallel := range []int{0, 100} {
+		answered := 0
+		for range DistributeRawRequest([]string{server.Listener.Addr().String(), server.Listener.Addr().String()}, "/x", "u", "p",
+			RequestBody{PlainPayload: []byte(`{}`)}, time.Second, maxParallel) {
+			answered++
+		}
+		if answered != 2 {
+			t.Errorf("maxParallel %d: expected 2 answers, got %d", maxParallel, answered)
+		}
+	}
+	if len(DistributeRawRequest(nil, "/x", "u", "p", RequestBody{}, time.Second, 5)) != 0 {
+		t.Errorf("expected no answers without targets")
 	}
 }

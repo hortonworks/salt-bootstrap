@@ -117,7 +117,10 @@ func distributeFingerprintImpl(distributeRequest func([]string, string, string, 
 }
 
 func getMinionFingerprintFromPrivateKey() model.Response {
-	keyLocation := MinionKey
+	return getMinionFingerprintFromPrivateKeyAt(MinionKey)
+}
+
+func getMinionFingerprintFromPrivateKeyAt(keyLocation string) model.Response {
 	log.Println("[getMinionFingerprintFromPrivateKey] generate the fingerprint from the minion's private key: " + keyLocation)
 
 	privateKeyText, err := os.ReadFile(keyLocation)
@@ -152,6 +155,31 @@ func getMinionFingerprintFromPrivateKey() model.Response {
 	log.Printf("[getMinionFingerprintFromPrivateKey] calculated fiingerprint: %s", fingerprint)
 
 	return model.Response{Status: fingerprint}
+}
+
+// getFingerprintOfPublicKeyPem returns the fingerprint of a public key as the salt-master stores it, in the same
+// format getMinionFingerprintFromPrivateKey computes on the minion, so the two can be compared. Salt writes
+// PKIX ("PUBLIC KEY") or, in older versions, PKCS#1 ("RSA PUBLIC KEY") keys.
+func getFingerprintOfPublicKeyPem(publicKeyText []byte) (string, error) {
+	block, _ := pem.Decode(publicKeyText)
+	if block == nil {
+		return "", errors.New("cannot decode public key")
+	}
+	publicKeyDer := block.Bytes
+	switch block.Type {
+	case "PUBLIC KEY":
+	case "RSA PUBLIC KEY":
+		publicKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return "", err
+		}
+		if publicKeyDer, err = x509.MarshalPKIXPublicKey(publicKey); err != nil {
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("unsupported key type: %s", block.Type)
+	}
+	return getFingerprint(string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyDer}))), nil
 }
 
 func getFingerprint(publicKey string) string {

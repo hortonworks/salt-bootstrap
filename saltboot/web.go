@@ -29,12 +29,15 @@ const (
 	HostnameEP                 = RootPath + "/hostname"
 	UploadEP                   = RootPath + "/file"
 	FileDistributeEP           = UploadEP + "/distribute"
+	DiagnosticsEP              = RootPath + "/diagnostics"
+	DiagnosticsDistributeEP    = DiagnosticsEP + "/distribute"
 )
 
 func NewCloudbreakBootstrapWeb() {
 	log.Println("[web] NewCloudbreakBootstrapWeb")
 
 	authenticator := Authenticator{}
+	LoadDiagnosticsConfig()
 
 	r := mux.NewRouter()
 	r.HandleFunc(HealthEP, HealthCheckHandler).Methods("GET")
@@ -60,6 +63,9 @@ func NewCloudbreakBootstrapWeb() {
 
 	r.Handle(UploadEP, authenticator.Wrap(FileUploadHandler, SIGNED)).Methods("POST")
 	r.Handle(FileDistributeEP, authenticator.Wrap(FileUploadDistributeHandler, SIGNED)).Methods("POST")
+
+	r.Handle(DiagnosticsEP, authenticator.Wrap(DiagnosticsHandler, SIGNED)).Methods("POST")
+	r.Handle(DiagnosticsDistributeEP, authenticator.Wrap(DiagnosticsDistributeHandler, SIGNED)).Methods("POST")
 
 	httpsEnabled := HttpsEnabled()
 	httpsOnly := HttpsOnly()
