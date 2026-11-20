@@ -605,30 +605,40 @@ func shouldAppendPrewarmedRoles(prewarmRoleLocation string) bool {
 // file yields false.
 func isSaltMasterListChanged(masterConfPath string, servers []string) bool {
 	log.Println("[isSaltMasterListChanged] check whether salt-minion requires restart")
-	b, err := os.ReadFile(masterConfPath)
-	if err != nil || len(b) == 0 {
+	ipList, found, err := readSaltMasterList(masterConfPath)
+	if !found {
 		log.Println("[isSaltMasterListChanged] there is no original salt-master config, no restart needed")
 		return false
-	} else {
-		var saltMasterIps = make(map[string][]string)
-		if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
-			log.Printf("[isSaltMasterListChanged] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
-			return false
-		} else {
-			ipList := saltMasterIps["master"]
-			log.Printf("[isSaltMasterListChanged] original master IP list: %s", ipList)
-
-			added := missingFrom(servers, ipList)
-			removed := missingFrom(ipList, servers)
-			if len(added) > 0 || len(removed) > 0 {
-				log.Printf("[isSaltMasterListChanged] salt-master list changed, added: %s, removed: %s, restart needed", added, removed)
-				return true
-			} else {
-				log.Println("[isSaltMasterListChanged] salt-master list is unchanged")
-				return false
-			}
-		}
 	}
+	if err != nil {
+		log.Printf("[isSaltMasterListChanged] [ERROR] failed to unmarshal salt master config file: %s", err.Error())
+		return false
+	}
+	log.Printf("[isSaltMasterListChanged] original master IP list: %s", ipList)
+
+	added := missingFrom(servers, ipList)
+	removed := missingFrom(ipList, servers)
+	if len(added) > 0 || len(removed) > 0 {
+		log.Printf("[isSaltMasterListChanged] salt-master list changed, added: %s, removed: %s, restart needed", added, removed)
+		return true
+	} else {
+		log.Println("[isSaltMasterListChanged] salt-master list is unchanged")
+		return false
+	}
+}
+
+// readSaltMasterList returns the salt-master list from masterConfPath. found is false when the file is
+// missing, unreadable or empty; err is set when the file exists but cannot be parsed.
+func readSaltMasterList(masterConfPath string) (masters []string, found bool, err error) {
+	b, readErr := os.ReadFile(masterConfPath)
+	if readErr != nil || len(b) == 0 {
+		return nil, false, nil
+	}
+	var saltMasterIps = make(map[string][]string)
+	if err := yaml.Unmarshal(b, saltMasterIps); err != nil {
+		return nil, true, err
+	}
+	return saltMasterIps["master"], true, nil
 }
 
 // missingFrom returns the distinct elements of items that are not present in reference, in their original order.

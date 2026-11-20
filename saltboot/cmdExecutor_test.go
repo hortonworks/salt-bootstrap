@@ -64,3 +64,37 @@ func TestExecCmdOnTest(t *testing.T) {
 		"date +%Y",
 	}, t)
 }
+
+func TestExecCmdWithTimeoutKillsTheCommand(t *testing.T) {
+	start := time.Now()
+	_, err := ExecCmdWithTimeout(200*time.Millisecond, "sleep", "5")
+
+	if err == nil || !strings.Contains(err.Error(), "timed out after 200ms") {
+		t.Errorf("expected a timeout error, got %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 3*time.Second {
+		t.Errorf("command was not killed, took %s", elapsed)
+	}
+}
+
+func TestTimedCommandExecutorKeepsTheOutputOfAFinishedCommand(t *testing.T) {
+	out, err := timedCommandExecutor(5*time.Second, "sh", "-c", "echo done")
+
+	if err != nil || strings.TrimSpace(string(out)) != "done" {
+		t.Errorf("expected the output and no error, got %q, %v", out, err)
+	}
+}
+
+func TestExecCmdWithTimeoutKeepsStderrOutOfTheOutput(t *testing.T) {
+	out, err := ExecCmdWithTimeout(5*time.Second, "sh", "-c", "echo out; echo warning >&2")
+
+	if err != nil || out != "out" {
+		t.Errorf("expected only stdout, got %q, %v", out, err)
+	}
+
+	_, err = ExecCmdWithTimeout(5*time.Second, "sh", "-c", "echo broken >&2; exit 3")
+
+	if err == nil || !strings.Contains(err.Error(), "exit status 3: broken") {
+		t.Errorf("expected stderr in the error, got %v", err)
+	}
+}
